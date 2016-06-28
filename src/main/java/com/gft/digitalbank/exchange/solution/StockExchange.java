@@ -6,7 +6,9 @@ import com.gft.digitalbank.exchange.Exchange;
 import com.gft.digitalbank.exchange.listener.ProcessingListener;
 
 /**
- * Your solution must implement the {@link Exchange} interface.
+ * Implementation of Exchange interface.
+ * 
+ * @author Arkadiusz Cieslak
  */
 public class StockExchange implements Exchange {
     
