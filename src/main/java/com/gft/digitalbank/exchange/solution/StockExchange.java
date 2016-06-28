@@ -9,12 +9,19 @@ import com.gft.digitalbank.exchange.listener.ProcessingListener;
  * Your solution must implement the {@link Exchange} interface.
  */
 public class StockExchange implements Exchange {
+    
+    private ProcessingListener processingListener;
+    
+    private List<String> destinations;
+    
     @Override
     public void register(ProcessingListener processingListener) {
+        this.processingListener = processingListener;
     }
 
     @Override
     public void setDestinations(List<String> list) {
+        this.destinations = list;
     }
 
     @Override
