@@ -1,10 +1,9 @@
 package com.gft.digitalbank.exchange.solution.engine;
 
 /**
- * Transaction engine for single product.
+ * Transaction engine.
  * 
  * @author Arkadiusz Cieslak
  */
-public class ProductTransactionEngine {
-
+public class TransactionEngineHub {
 }
