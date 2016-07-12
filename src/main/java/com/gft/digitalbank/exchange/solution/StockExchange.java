@@ -97,6 +97,9 @@ public class StockExchange implements Exchange {
      * Method creates TransactionEngine instance.
      */
     private void setUpTransactionEngine() {
+        transactionEngine = new TransactionEngine();
+        
+        transactionEngine.setExecutor(executor);
     }
     
     /**
