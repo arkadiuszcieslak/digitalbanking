@@ -22,6 +22,6 @@ public class PositionOrderHandler extends AbstractMessageHandler<PositionOrder> 
 
     @Override
     protected void handleMessage(PositionOrder brokerMessage) {
-        TransactionEngine.getInstance().onBrokerMessage(brokerMessage);
+        transactionEngine.onBrokerMessage(brokerMessage);
     }
 }

@@ -22,6 +22,6 @@ public class ModificationOrderHandler extends AbstractMessageHandler<Modificatio
 
     @Override
     protected void handleMessage(ModificationOrder brokerMessage) {
-        TransactionEngine.getInstance().onBrokerMessage(brokerMessage);
+        transactionEngine.onBrokerMessage(brokerMessage);
     }
 }

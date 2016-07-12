@@ -22,6 +22,6 @@ public class ShutdownNotificationHandler extends AbstractMessageHandler<Shutdown
 
     @Override
     protected void handleMessage(ShutdownNotification brokerMessage) {
-        TransactionEngine.getInstance().onBrokerMessage(brokerMessage);
+        transactionEngine.onBrokerMessage(brokerMessage);
     }
 }

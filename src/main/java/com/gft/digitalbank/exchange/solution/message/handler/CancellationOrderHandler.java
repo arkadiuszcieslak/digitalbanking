@@ -22,6 +22,6 @@ public class CancellationOrderHandler extends AbstractMessageHandler<Cancellatio
 
     @Override
     protected void handleMessage(CancellationOrder brokerMessage) {
-        TransactionEngine.getInstance().onBrokerMessage(brokerMessage);
+        transactionEngine.onBrokerMessage(brokerMessage);
     }
 }

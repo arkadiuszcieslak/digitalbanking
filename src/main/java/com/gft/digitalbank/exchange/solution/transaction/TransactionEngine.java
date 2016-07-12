@@ -1,9 +1,9 @@
 package com.gft.digitalbank.exchange.solution.transaction;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.gft.digitalbank.exchange.model.SolutionResult;
@@ -28,30 +28,12 @@ public class TransactionEngine {
     private Queue<Transaction> transactions = new ConcurrentLinkedQueue();
     
     /** Map of product transaction engines identified by product name */
-    private Map<String, ProductTransactionEngine> productEngines = new HashMap<>();
+    private Map<String, ProductTransactionEngine> productEngines = new ConcurrentHashMap<>();
 
     /** Map of processed messages identified by message id */
-    private Map<Integer, BrokerMessage> processedMessages = new HashMap<>();
+    private Map<Integer, BrokerMessage> processedMessages = new ConcurrentHashMap<>();
     
     private Observable shutdownMessageObservable = new Observable();
-    
-    /** Static instance of TransactionEngine */
-    private static final TransactionEngine INSTANCE = new TransactionEngine();
-    
-    /**
-     * Private constructor.
-     */
-    private TransactionEngine() {}
-    
-    /**
-     * Factory method to get singleton instance.
-     * It is thread-safe.
-     * 
-     * @return singleton instance of TransactionEngine
-     */
-    public static TransactionEngine getInstance() {
-        return TransactionEngine.INSTANCE;
-    }
     
     public SolutionResult createSolutionResult() {
         return null;
