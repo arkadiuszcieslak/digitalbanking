@@ -1,40 +1,30 @@
 package com.gft.digitalbank.exchange.solution.message;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.jms.ConnectionFactory;
 import javax.jms.Session;
 
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
+import com.gft.digitalbank.exchange.model.orders.BrokerMessage;
 import com.gft.digitalbank.exchange.solution.message.handler.AbstractMessageHandler;
-import com.gft.digitalbank.exchange.solution.message.handler.CancellationOrderHandler;
-import com.gft.digitalbank.exchange.solution.message.handler.ModificationOrderHandler;
-import com.gft.digitalbank.exchange.solution.message.handler.PositionOrderHandler;
-import com.gft.digitalbank.exchange.solution.message.handler.ShutdownNotificationHandler;
 import com.google.common.base.Preconditions;
 
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.extern.apachecommons.CommonsLog;
+import lombok.Setter;
 
 /**
  * Class processes orders coming from single JMS Broker.
  * 
  * @author Arkadiusz Cieslak
  */
-@CommonsLog
-public class BrokerMessageProcessor {
+public class BrokerMessageProcessor extends AbstractProcessor {
 
     /** Predefined list of message handlers */
-    @SuppressWarnings("rawtypes")
-    private static final List<AbstractMessageHandler> HANDLERS = Arrays.asList(new CancellationOrderHandler(), new ModificationOrderHandler(),
-            new PositionOrderHandler(), new ShutdownNotificationHandler());
-
-    /** Factory for establishing JMS Connection */
-    private ConnectionFactory connectionFactory;
+    @Setter
+    private List<AbstractMessageHandler<? extends BrokerMessage>> messageHandlers;
 
     /** Destination name */
     @Getter
@@ -42,44 +32,30 @@ public class BrokerMessageProcessor {
 
     /** List of message listeners */
     private List<DefaultMessageListenerContainer> listeners;
-    
-    /** Is processor started? */
-    private boolean started;
 
     /**
      * Constructor.
      * 
-     * @param connectionFactory
-     *            factory for establishing JMS Connection
-     * @param destinationName
-     *            destination name
+     * @param destinationName name of the destination
      */
-    public BrokerMessageProcessor(@NonNull ConnectionFactory connectionFactory, @NonNull String destinationName) {
-        this.connectionFactory = connectionFactory;
+    public BrokerMessageProcessor(@NonNull String destinationName) {
+        super("BrokerMessageProcessor-" + destinationName);
+        
         this.destinationName = destinationName;
     }
 
-    /**
-     * Method starts processor for single broker.
-     */
-    public void start() {
-        Preconditions.checkState(! started, "Processor already started");
+    @Override
+    protected void doStart() {
+        Preconditions.checkNotNull(messageHandlers, "MessageHandlers not set");
         
-        log.debug("Starting BrokerMessageProcessor for destination: " + destinationName);
-
-        listeners = BrokerMessageProcessor.HANDLERS
+        listeners = messageHandlers
                 .stream()
                 .map(this::createMessageListener)
                 .collect(Collectors.toList());
-        
-        started = true;
     }
 
-    public void stop() {
-        Preconditions.checkState(started, "Processor not started");
-        
-        log.debug("Stoping BrokerMessageProcessor for destination: " + destinationName);
-
+    @Override
+    protected void doStop() {
         listeners.forEach(l -> l.stop());
     }
 
@@ -102,6 +78,10 @@ public class BrokerMessageProcessor {
         container.setMessageSelector(String.format("messageType = '%s'", h.getAcceptedMessageType()));
         container.setSessionAcknowledgeMode(Session.CLIENT_ACKNOWLEDGE);
         container.setMessageListener(h);
+        
+        if(executor != null)
+            container.setTaskExecutor(executor);
+        
         container.initialize();
         container.start();
 

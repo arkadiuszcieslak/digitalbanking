@@ -8,7 +8,6 @@ import java.util.TreeSet;
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
 
 import lombok.Getter;
-import scala.annotation.meta.getter;
 
 /**
  * Transaction engine for single product.

@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.gft.digitalbank.exchange.model.orders.BrokerMessage;
+import com.gft.digitalbank.exchange.solution.message.handler.AbstractMessageHandler;
 import com.google.common.base.Preconditions;
 
 import lombok.Setter;
@@ -18,6 +20,10 @@ public class MessageProcessor extends AbstractProcessor {
     /** List of broker destinations */
     @Setter
     private List<String> destinations;
+
+    /** Predefined list of message handlers */
+    @Setter
+    private List<AbstractMessageHandler<? extends BrokerMessage>> messageHandlers;
     
     /** Map of broker processors identified by broker destination name */
     private Map<String, BrokerMessageProcessor> brokerProcessors;
@@ -51,6 +57,7 @@ public class MessageProcessor extends AbstractProcessor {
         
         processor.setConnectionFactory(connectionFactory);
         processor.setTransactionEngine(transactionEngine);
+        processor.setMessageHandlers(messageHandlers);
         processor.setExecutor(executor);
         processor.start();
         
@@ -58,7 +65,7 @@ public class MessageProcessor extends AbstractProcessor {
     }
     
     @Override
-    public void doStop() {
+    protected void doStop() {
         brokerProcessors
             .values()
             .forEach(p -> p.stop());
