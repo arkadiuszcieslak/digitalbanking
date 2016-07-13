@@ -17,6 +17,7 @@ import com.gft.digitalbank.exchange.model.orders.ModificationOrder;
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
 import com.gft.digitalbank.exchange.model.orders.ShutdownNotification;
 
+import lombok.EqualsAndHashCode;
 import lombok.Setter;
 
 /**
@@ -37,8 +38,8 @@ public class TransactionEngine {
     private Map<String, ProductTransactionEngine> productEngines = new ConcurrentHashMap<>();
 
     // Indexes
-    /** Index of position orders (identified by id) */
-    private Map<Integer, PositionOrder> positionOrderIdx = new ConcurrentHashMap<>();
+    /** Index of position orders (identified by OrderId) */
+    private Map<OrderId, PositionOrder> positionOrderIdx = new ConcurrentHashMap<>();
 
     private Observable shutdownMessageObservable = new Observable();
 
@@ -94,7 +95,7 @@ public class TransactionEngine {
      */
     public void onBrokerMessage(final CancellationOrder message) {
         executor.execute(() -> {
-            PositionOrder order = getIndexPositionOrder(message.getCancelledOrderId());
+            PositionOrder order = getIndexPositionOrder(new OrderId(message.getCancelledOrderId(), message.getBroker()));
 
             if (order != null) {
                 ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
@@ -113,7 +114,7 @@ public class TransactionEngine {
      */
     public void onBrokerMessage(final ModificationOrder message) {
         executor.execute(() -> {
-            PositionOrder order = getIndexPositionOrder(message.getModifiedOrderId());
+            PositionOrder order = getIndexPositionOrder(new OrderId(message.getModifiedOrderId(), message.getBroker()));
 
             if (order != null) {
                 ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
@@ -156,7 +157,7 @@ public class TransactionEngine {
      * @param order position order
      */
     private void addIndexPositionOrder(final PositionOrder order) {
-        positionOrderIdx.put(order.getId(), order);
+        positionOrderIdx.put(new OrderId(order.getId(), order.getBroker()), order);
     }
 
     /**
@@ -165,7 +166,7 @@ public class TransactionEngine {
      * @param order position order
      */
     private void removeIndexPositionOrder(final PositionOrder order) {
-        positionOrderIdx.remove(order.getId());
+        positionOrderIdx.remove(new OrderId(order.getId(), order.getBroker()));
     }
 
     /**
@@ -175,7 +176,7 @@ public class TransactionEngine {
      * 
      * @return PositionOrder from index or null if not present
      */
-    private PositionOrder getIndexPositionOrder(final int orderId) {
+    private PositionOrder getIndexPositionOrder(final OrderId orderId) {
         return positionOrderIdx.get(orderId);
     }
     
@@ -189,5 +190,16 @@ public class TransactionEngine {
                 .stream()
                 .map(ProductTransactionEngine::toOrderBook)
                 .collect(Collectors.toSet());
+    }
+
+    @EqualsAndHashCode
+    private final class OrderId {
+        private final int id;
+        private final String broker;
+        
+        public OrderId(int id, String broker) {
+            this.id = id;
+            this.broker = broker;
+        }
     }
 }
