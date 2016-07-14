@@ -6,7 +6,6 @@ import java.util.Observable;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 import com.gft.digitalbank.exchange.model.OrderBook;
@@ -16,20 +15,16 @@ import com.gft.digitalbank.exchange.model.orders.CancellationOrder;
 import com.gft.digitalbank.exchange.model.orders.ModificationOrder;
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
 import com.gft.digitalbank.exchange.model.orders.ShutdownNotification;
+import com.gft.digitalbank.exchange.solution.util.MessageUtils;
 
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 
 /**
  * Class reperesents transaction engine for all products and brokers.
  * 
  * @author Arkadiusz Cieslak
  */
-public class TransactionEngine {
-
-    /** Executor pool */
-    @Setter
-    private Executor executor;
+public class TransactionEngine extends Observable {
 
     /** List of transactions */
     private Queue<Transaction> transactions = new ConcurrentLinkedQueue<>();
@@ -37,11 +32,8 @@ public class TransactionEngine {
     /** Map of product transaction engines (identified by product name) */
     private Map<String, ProductTransactionEngine> productEngines = new ConcurrentHashMap<>();
 
-    // Indexes
     /** Index of position orders (identified by OrderId) */
     private Map<OrderId, PositionOrder> positionOrderIdx = new ConcurrentHashMap<>();
-
-    private Observable shutdownMessageObservable = new Observable();
 
     /**
      * Creates and returns solution result based on transactions and messages.
@@ -55,10 +47,15 @@ public class TransactionEngine {
             .build();
     }
 
+    
     /**
-     * Clear all collections and indexes used by class.
+     * Shutdowns engine.
      */
-    public void clearAll() {
+    public void shutdown() {
+        productEngines.values()
+            .stream()
+            .forEach(pte -> pte.shutdown());
+
         transactions.clear();
         productEngines.clear();
         positionOrderIdx.clear();
@@ -79,13 +76,11 @@ public class TransactionEngine {
      * @param message PositionOrder message
      */
     public void onBrokerMessage(final PositionOrder message) {
-        executor.execute(() -> {
-            ProductTransactionEngine pte = getProductTransactionEngine(message.getProduct());
+        ProductTransactionEngine pte = getProductTransactionEngine(message.getProduct());
 
-            pte.onPositionOrder(message);
+        pte.onPositionOrder(message);
 
-            addIndexPositionOrder(message);
-        });
+        addIndexPositionOrder(message);
     }
 
     /**
@@ -94,17 +89,15 @@ public class TransactionEngine {
      * @param message CancellationOrder message
      */
     public void onBrokerMessage(final CancellationOrder message) {
-        executor.execute(() -> {
-            PositionOrder order = getIndexPositionOrder(new OrderId(message.getCancelledOrderId(), message.getBroker()));
+        PositionOrder order = getIndexPositionOrder(new OrderId(message.getCancelledOrderId(), message.getBroker()));
 
-            if (order != null) {
-                ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
+        if (MessageUtils.sameBroker(order, message)) {
+            ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
 
-                pte.onCancellOrder(order);
+            pte.onCancellOrder(order);
 
-                removeIndexPositionOrder(order);
-            }
-        });
+            removeIndexPositionOrder(order);
+        }
     }
 
     /**
@@ -113,15 +106,17 @@ public class TransactionEngine {
      * @param message ModificationOrder message
      */
     public void onBrokerMessage(final ModificationOrder message) {
-        executor.execute(() -> {
-            PositionOrder order = getIndexPositionOrder(new OrderId(message.getModifiedOrderId(), message.getBroker()));
+        PositionOrder order = getIndexPositionOrder(new OrderId(message.getModifiedOrderId(), message.getBroker()));
 
-            if (order != null) {
-                ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
+        if (MessageUtils.sameBroker(order, message)) {
+            ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
+            PositionOrder newOrder = MessageUtils.modifyPositionOrderDetails(order, message.getDetails());
 
-                pte.onModifyOrder(order, message);
-            }
-        });
+            pte.onModifyOrder(order, newOrder);
+            
+            removeIndexPositionOrder(order);
+            addIndexPositionOrder(newOrder);
+        }
     }
 
     /**
@@ -130,6 +125,9 @@ public class TransactionEngine {
      * @param message ShutdownNotification message
      */
     public void onBrokerMessage(final ShutdownNotification message) {
+        setChanged();
+        notifyObservers(message.getBroker());
+        clearChanged();
     }
 
     /**
@@ -144,7 +142,8 @@ public class TransactionEngine {
 
         if (pte == null) {
             pte = new ProductTransactionEngine(productName);
-
+            
+            pte.setTransactionEngine(this);
             productEngines.put(productName, pte);
         }
 

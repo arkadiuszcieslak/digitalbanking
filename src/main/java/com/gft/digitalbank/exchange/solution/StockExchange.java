@@ -2,7 +2,7 @@ package com.gft.digitalbank.exchange.solution;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.jms.ConnectionFactory;
@@ -12,7 +12,9 @@ import javax.naming.NamingException;
 
 import com.gft.digitalbank.exchange.Exchange;
 import com.gft.digitalbank.exchange.listener.ProcessingListener;
+import com.gft.digitalbank.exchange.model.SolutionResult;
 import com.gft.digitalbank.exchange.model.orders.BrokerMessage;
+import com.gft.digitalbank.exchange.solution.listener.BrokerShutdownListener;
 import com.gft.digitalbank.exchange.solution.message.MessageProcessor;
 import com.gft.digitalbank.exchange.solution.message.handler.AbstractMessageHandler;
 import com.gft.digitalbank.exchange.solution.message.handler.CancellationOrderHandler;
@@ -46,11 +48,14 @@ public class StockExchange implements Exchange {
     /** TransactionEngine reference */
     private TransactionEngine transactionEngine;
     
+    /** Broker shutdown listener */
+    private BrokerShutdownListener brokerShutdownListener; 
+    
     /** List of stateless message handlers */
     private List<AbstractMessageHandler<? extends BrokerMessage>> messageHandlers;
     
     /** Executor pool */
-    private Executor executor;
+    private ExecutorService executor;
     
     @Override
     public void register(ProcessingListener processingListener) {
@@ -67,10 +72,29 @@ public class StockExchange implements Exchange {
         setUpConnectionFactory();
         setUpExecutor();
         setUpTransactionEngine();
+        setUpBrokerShutdownListener();
         setUpMessageHandlers();
         setUpMessageProcessor();
         
         messageProcessor.start();
+    }
+    
+    /**
+     * Shutdown the broker.
+     * 
+     * @param brokerName name of the broker
+     */
+    public void shutdownBroker(String brokerName) {
+        destinations.remove(brokerName);
+        
+        if (destinations.isEmpty()) {
+            SolutionResult solution = transactionEngine.createSolutionResult();
+
+            transactionEngine.deleteObserver(brokerShutdownListener);
+            transactionEngine.shutdown();
+            messageProcessor.stop();
+            processingListener.processingDone(solution);
+        }
     }
     
     /**
@@ -98,8 +122,13 @@ public class StockExchange implements Exchange {
      */
     private void setUpTransactionEngine() {
         transactionEngine = new TransactionEngine();
+    }
+    
+    private void setUpBrokerShutdownListener() {
+        brokerShutdownListener = new BrokerShutdownListener();
         
-        transactionEngine.setExecutor(executor);
+        brokerShutdownListener.setStockExchange(this);
+        transactionEngine.addObserver(brokerShutdownListener);
     }
     
     /**
