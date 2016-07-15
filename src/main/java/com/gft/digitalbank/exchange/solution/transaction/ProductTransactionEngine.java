@@ -148,7 +148,7 @@ public class ProductTransactionEngine {
     /**
      * Try to process transactions based on orders on lists.
      */
-    private void processTransactions() {
+    private synchronized void processTransactions() {
         while(! buyOrders.isEmpty() && ! sellOrders.isEmpty()) {
             PositionOrder buy = buyOrders.first();
             PositionOrder sell = sellOrders.first();
@@ -177,10 +177,14 @@ public class ProductTransactionEngine {
         }
     }
 
-    public OrderBook toOrderBook() {
+    public synchronized OrderBook toOrderBook() {
         List<OrderEntry> buyEntries = toOrderEntries(buyOrders);
         List<OrderEntry> sellEntries = toOrderEntries(sellOrders);
 
+        if (buyEntries.isEmpty() && sellEntries.isEmpty()) {
+            return null;
+        }
+        
         return new OrderBook(getProductName(), buyEntries, sellEntries);
     }
 
@@ -192,17 +196,15 @@ public class ProductTransactionEngine {
      * @return list of OrderEntries
      */
     private List<OrderEntry> toOrderEntries(Collection<PositionOrder> orders) {
-        synchronized (orders) {
-            return orders
-                    .stream()
-                    .map(o -> OrderEntry.builder()
-                                .id(o.getId())
-                                .broker(o.getBroker())
-                                .client(o.getClient())
-                                .amount(o.getDetails().getAmount())
-                                .price(o.getDetails().getPrice())
-                                .build())
-                    .collect(Collectors.toList());
-        }
+        return orders
+                .stream()
+                .map(o -> OrderEntry.builder()
+                            .id(o.getId())
+                            .broker(o.getBroker())
+                            .client(o.getClient())
+                            .amount(o.getDetails().getAmount())
+                            .price(o.getDetails().getPrice())
+                            .build())
+                .collect(Collectors.toList());
     }
 }

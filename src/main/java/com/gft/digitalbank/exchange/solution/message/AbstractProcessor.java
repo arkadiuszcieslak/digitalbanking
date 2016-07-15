@@ -9,14 +9,14 @@ import com.google.common.base.Preconditions;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.apachecommons.CommonsLog;
+import lombok.extern.log4j.Log4j;
 
 /**
  * Abstract message processor.
  * 
  * @author Arkadiusz Cieslak
  */
-@CommonsLog
+@Log4j
 public abstract class AbstractProcessor {
     
     /** Factory for establishing connection to JMS broker */

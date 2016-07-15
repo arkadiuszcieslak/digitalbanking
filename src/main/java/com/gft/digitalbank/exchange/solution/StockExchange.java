@@ -23,14 +23,14 @@ import com.gft.digitalbank.exchange.solution.message.handler.PositionOrderHandle
 import com.gft.digitalbank.exchange.solution.message.handler.ShutdownNotificationHandler;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 
-import lombok.extern.apachecommons.CommonsLog;
+import lombok.extern.log4j.Log4j;
 
 /**
  * Implementation of Exchange interface.
  * 
  * @author Arkadiusz Cieslak
  */
-@CommonsLog
+@Log4j
 public class StockExchange implements Exchange {
     
     /** Listener called at the end of processing */
@@ -93,6 +93,7 @@ public class StockExchange implements Exchange {
             transactionEngine.deleteObserver(brokerShutdownListener);
             transactionEngine.shutdown();
             messageProcessor.stop();
+            executor.shutdown();
             processingListener.processingDone(solution);
         }
     }
