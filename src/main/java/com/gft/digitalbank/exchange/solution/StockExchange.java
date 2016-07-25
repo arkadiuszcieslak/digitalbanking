@@ -1,6 +1,5 @@
 package com.gft.digitalbank.exchange.solution;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -13,14 +12,8 @@ import javax.naming.NamingException;
 import com.gft.digitalbank.exchange.Exchange;
 import com.gft.digitalbank.exchange.listener.ProcessingListener;
 import com.gft.digitalbank.exchange.model.SolutionResult;
-import com.gft.digitalbank.exchange.model.orders.BrokerMessage;
 import com.gft.digitalbank.exchange.solution.listener.BrokerShutdownListener;
 import com.gft.digitalbank.exchange.solution.message.MessageProcessor;
-import com.gft.digitalbank.exchange.solution.message.handler.AbstractMessageHandler;
-import com.gft.digitalbank.exchange.solution.message.handler.CancellationOrderHandler;
-import com.gft.digitalbank.exchange.solution.message.handler.ModificationOrderHandler;
-import com.gft.digitalbank.exchange.solution.message.handler.PositionOrderHandler;
-import com.gft.digitalbank.exchange.solution.message.handler.ShutdownNotificationHandler;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 
 import lombok.extern.log4j.Log4j;
@@ -51,9 +44,6 @@ public class StockExchange implements Exchange {
     /** Broker shutdown listener */
     private BrokerShutdownListener brokerShutdownListener; 
     
-    /** List of stateless message handlers */
-    private List<AbstractMessageHandler<? extends BrokerMessage>> messageHandlers;
-    
     /** Executor pool */
     private ExecutorService executor;
     
@@ -67,13 +57,20 @@ public class StockExchange implements Exchange {
         this.destinations = list;
     }
 
+    public void setConnectionFactory(ConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
+
+    public void setExecutor(ExecutorService executor) {
+        this.executor = executor;
+    }
+
     @Override
     public void start() {
         setUpConnectionFactory();
         setUpExecutor();
         setUpTransactionEngine();
         setUpBrokerShutdownListener();
-        setUpMessageHandlers();
         setUpMessageProcessor();
         
         messageProcessor.start();
@@ -102,6 +99,10 @@ public class StockExchange implements Exchange {
      * Method looks up for ConnectionFactory instance.
      */
     private void setUpConnectionFactory() {
+        if (connectionFactory != null) {
+            return;
+        }
+        
         try {
             Context context = new InitialContext();
             
@@ -115,14 +116,16 @@ public class StockExchange implements Exchange {
      * Method creates executor instance.
      */
     private void setUpExecutor() {
-        executor = Executors.newCachedThreadPool();
+        if (executor == null) {
+            executor = Executors.newCachedThreadPool();
+        }
     }
     
     /**
      * Method creates TransactionEngine instance.
      */
     private void setUpTransactionEngine() {
-        transactionEngine = new TransactionEngine();
+        transactionEngine = new TransactionEngine(executor);
     }
     
     private void setUpBrokerShutdownListener() {
@@ -130,18 +133,6 @@ public class StockExchange implements Exchange {
         
         brokerShutdownListener.setStockExchange(this);
         transactionEngine.addObserver(brokerShutdownListener);
-    }
-    
-    /**
-     * Method creates MessageHandlers list.
-     */
-    private void setUpMessageHandlers() {
-        messageHandlers = new ArrayList<>();
-        
-        messageHandlers.add(new CancellationOrderHandler(transactionEngine));
-        messageHandlers.add(new ModificationOrderHandler(transactionEngine));
-        messageHandlers.add(new PositionOrderHandler(transactionEngine));
-        messageHandlers.add(new ShutdownNotificationHandler(transactionEngine));
     }
     
     /**
@@ -154,6 +145,5 @@ public class StockExchange implements Exchange {
         messageProcessor.setExecutor(executor);
         messageProcessor.setTransactionEngine(transactionEngine);
         messageProcessor.setDestinations(destinations);
-        messageProcessor.setMessageHandlers(messageHandlers);
     }
 }

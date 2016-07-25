@@ -1,7 +1,6 @@
 package com.gft.digitalbank.exchange.solution.message.handler;
 
 import com.gft.digitalbank.exchange.model.orders.CancellationOrder;
-import com.gft.digitalbank.exchange.model.orders.MessageType;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 
 /**
@@ -9,19 +8,15 @@ import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
  * 
  * @author Arkadiusz Cieslak
  */
-public class CancellationOrderHandler extends AbstractMessageHandler<CancellationOrder> {
+public class CancellationOrderHandler implements MessageHandler<CancellationOrder> {
     
-    /**
-     * Constructor.
-     * 
-     * @param transactionEngine ref to TransactionEngine
-     */
-    public CancellationOrderHandler(TransactionEngine transactionEngine) {
-        super(transactionEngine, MessageType.CANCEL, CancellationOrder.class);
+    @Override
+    public void handleMessage(TransactionEngine transactionEngine, CancellationOrder brokerMessage) {
+        transactionEngine.onBrokerMessage(brokerMessage);
     }
 
     @Override
-    protected void handleMessage(CancellationOrder brokerMessage) {
-        transactionEngine.onBrokerMessage(brokerMessage);
+    public Class<CancellationOrder> getMessageClass() {
+        return CancellationOrder.class;
     }
 }

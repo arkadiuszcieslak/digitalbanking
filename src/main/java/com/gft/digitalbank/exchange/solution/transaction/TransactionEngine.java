@@ -1,11 +1,12 @@
 package com.gft.digitalbank.exchange.solution.transaction;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Observable;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 import com.gft.digitalbank.exchange.model.OrderBook;
@@ -25,15 +26,27 @@ import lombok.EqualsAndHashCode;
  * @author Arkadiusz Cieslak
  */
 public class TransactionEngine extends Observable {
+    
+    /** Provided executor */
+    private final Executor executor;
 
     /** List of transactions */
-    private Queue<Transaction> transactions = new ConcurrentLinkedQueue<>();
+    private List<Transaction> transactions = new ArrayList<>();
 
     /** Map of product transaction engines (identified by product name) */
     private Map<String, ProductTransactionEngine> productEngines = new ConcurrentHashMap<>();
 
     /** Index of position orders (identified by OrderId) */
     private Map<OrderId, PositionOrder> positionOrderIdx = new ConcurrentHashMap<>();
+    
+    /**
+     * Constructor.
+     * 
+     * @param executor provided executor
+     */
+    public TransactionEngine(Executor executor) {
+        this.executor = executor;
+    }
 
     /**
      * Creates and returns solution result based on transactions and messages.
@@ -42,8 +55,8 @@ public class TransactionEngine extends Observable {
      */
     public SolutionResult createSolutionResult() {
         return SolutionResult.builder()
+            .orderBooks(createOrderBooks())
             .transactions(transactions)
-            .orderBooks(createOrderBooks()) 
             .build();
     }
 
@@ -89,7 +102,7 @@ public class TransactionEngine extends Observable {
      * @param message CancellationOrder message
      */
     public void onBrokerMessage(final CancellationOrder message) {
-        PositionOrder order = getIndexPositionOrder(new OrderId(message.getCancelledOrderId(), message.getBroker()));
+        PositionOrder order = getIndexPositionOrder(message.getCancelledOrderId(), message.getBroker());
 
         if (MessageUtils.sameBroker(order, message)) {
             ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
@@ -106,7 +119,7 @@ public class TransactionEngine extends Observable {
      * @param message ModificationOrder message
      */
     public void onBrokerMessage(final ModificationOrder message) {
-        PositionOrder order = getIndexPositionOrder(new OrderId(message.getModifiedOrderId(), message.getBroker()));
+        PositionOrder order = getIndexPositionOrder(message.getModifiedOrderId(), message.getBroker());
 
         if (MessageUtils.sameBroker(order, message)) {
             ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
@@ -141,7 +154,7 @@ public class TransactionEngine extends Observable {
         ProductTransactionEngine pte = productEngines.get(productName);
 
         if (pte == null) {
-            pte = new ProductTransactionEngine(productName);
+            pte = new ProductTransactionEngine(productName, executor);
             
             pte.setTransactionEngine(this);
             productEngines.put(productName, pte);
@@ -172,11 +185,12 @@ public class TransactionEngine extends Observable {
      * Get object from index.
      * 
      * @param orderId order id
+     * @param broker name of broker
      * 
      * @return PositionOrder from index or null if not present
      */
-    private PositionOrder getIndexPositionOrder(final OrderId orderId) {
-        return positionOrderIdx.get(orderId);
+    private PositionOrder getIndexPositionOrder(final int orderId, String broker) {
+        return positionOrderIdx.get(new OrderId(orderId, broker));
     }
     
     /**
@@ -188,6 +202,7 @@ public class TransactionEngine extends Observable {
         return productEngines.values()
                 .stream()
                 .map(ProductTransactionEngine::toOrderBook)
+                .filter(o -> o != null)
                 .collect(Collectors.toSet());
     }
 

@@ -1,6 +1,5 @@
 package com.gft.digitalbank.exchange.solution.message.handler;
 
-import com.gft.digitalbank.exchange.model.orders.MessageType;
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 
@@ -9,19 +8,15 @@ import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
  * 
  * @author Arkadiusz Cieslak
  */
-public class PositionOrderHandler extends AbstractMessageHandler<PositionOrder> {
+public class PositionOrderHandler implements MessageHandler<PositionOrder> {
 
-    /**
-     * Constructor.
-     * 
-     * @param transactionEngine ref to TransactionEngine
-     */
-    public PositionOrderHandler(TransactionEngine transactionEngine) {
-        super(transactionEngine, MessageType.ORDER, PositionOrder.class);
+    @Override
+    public void handleMessage(TransactionEngine transactionEngine, PositionOrder brokerMessage) {
+        transactionEngine.onBrokerMessage(brokerMessage);
     }
 
     @Override
-    protected void handleMessage(PositionOrder brokerMessage) {
-        transactionEngine.onBrokerMessage(brokerMessage);
+    public Class<PositionOrder> getMessageClass() {
+        return PositionOrder.class;
     }
 }

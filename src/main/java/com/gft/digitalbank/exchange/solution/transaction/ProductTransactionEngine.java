@@ -2,13 +2,11 @@ package com.gft.digitalbank.exchange.solution.transaction;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections.comparators.ComparatorChain;
@@ -18,6 +16,7 @@ import com.gft.digitalbank.exchange.model.OrderEntry;
 import com.gft.digitalbank.exchange.model.Transaction;
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
 import com.gft.digitalbank.exchange.solution.util.MessageUtils;
+import com.gft.digitalbank.exchange.solution.util.SerialExecutor;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -39,38 +38,38 @@ public class ProductTransactionEngine {
     /** Name of the product */
     @Getter
     private String productName;
-    
+
     /** Reference to transaction engine */
     @Setter
     private TransactionEngine transactionEngine;
 
     /** Sorted set of buy orders */
     @SuppressWarnings("unchecked")
-    private SortedSet<PositionOrder> buyOrders = Collections
-            .synchronizedSortedSet(new TreeSet<>(new ComparatorChain(Arrays.asList(COMPARE_BY_PRICE.reversed(), COMPARE_BY_TIMESTAMP))));
+    private SortedSet<PositionOrder> buyOrders = new TreeSet<>(
+            new ComparatorChain(Arrays.asList(COMPARE_BY_PRICE.reversed(), COMPARE_BY_TIMESTAMP)));
 
     /** Sorted set of sell orders */
     @SuppressWarnings("unchecked")
-    private SortedSet<PositionOrder> sellOrders = Collections
-            .synchronizedSortedSet(new TreeSet<>(new ComparatorChain(Arrays.asList(COMPARE_BY_PRICE, COMPARE_BY_TIMESTAMP))));
+    private SortedSet<PositionOrder> sellOrders = new TreeSet<>(new ComparatorChain(Arrays.asList(COMPARE_BY_PRICE, COMPARE_BY_TIMESTAMP)));
 
-    /** Single thread executor which queues tasks in order of submitions */
-    private ExecutorService executor = Executors.newSingleThreadExecutor();
+    /** Serial executor which queues tasks in order of submitions */
+    private Executor executor;
 
     /**
      * Constructor.
      * 
      * @param productName name of the product
+     * @param executor provided executor
      */
-    public ProductTransactionEngine(final String productName) {
+    public ProductTransactionEngine(final String productName, Executor executor) {
         this.productName = productName;
+        this.executor = new SerialExecutor(executor);
     }
-    
+
     /**
      * Shutdowns engine.
      */
     public void shutdown() {
-        executor.shutdown();
         buyOrders.clear();
         sellOrders.clear();
     }
@@ -112,7 +111,7 @@ public class ProductTransactionEngine {
             processTransactions();
         });
     }
-    
+
     /**
      * Adds PositionOrder to proper sorted collection based on order side.
      * 
@@ -128,7 +127,7 @@ public class ProductTransactionEngine {
             break;
         }
     }
-    
+
     /**
      * Removes PositionOrder from proper sorted collection based on order side.
      * 
@@ -144,21 +143,21 @@ public class ProductTransactionEngine {
             break;
         }
     }
-    
+
     /**
      * Try to process transactions based on orders on lists.
      */
-    private synchronized void processTransactions() {
-        while(! buyOrders.isEmpty() && ! sellOrders.isEmpty()) {
+    private void processTransactions() {
+        while (!buyOrders.isEmpty() && !sellOrders.isEmpty()) {
             PositionOrder buy = buyOrders.first();
             PositionOrder sell = sellOrders.first();
-            
+
             Transaction t = MessageUtils.tryCreateTransaction(buy, sell);
-            
+
             if (t == null) {
                 break;
             }
-            
+
             transactionEngine.addExecutedTransaction(t);
 
             buyOrders.remove(buy);
@@ -170,21 +169,21 @@ public class ProductTransactionEngine {
             if (newBuy != null) {
                 buyOrders.add(newBuy);
             }
-            
+
             if (newSell != null) {
                 sellOrders.add(newSell);
             }
         }
     }
 
-    public synchronized OrderBook toOrderBook() {
+    public OrderBook toOrderBook() {
         List<OrderEntry> buyEntries = toOrderEntries(buyOrders);
         List<OrderEntry> sellEntries = toOrderEntries(sellOrders);
 
         if (buyEntries.isEmpty() && sellEntries.isEmpty()) {
             return null;
         }
-        
+
         return new OrderBook(getProductName(), buyEntries, sellEntries);
     }
 
@@ -196,15 +195,7 @@ public class ProductTransactionEngine {
      * @return list of OrderEntries
      */
     private List<OrderEntry> toOrderEntries(Collection<PositionOrder> orders) {
-        return orders
-                .stream()
-                .map(o -> OrderEntry.builder()
-                            .id(o.getId())
-                            .broker(o.getBroker())
-                            .client(o.getClient())
-                            .amount(o.getDetails().getAmount())
-                            .price(o.getDetails().getPrice())
-                            .build())
-                .collect(Collectors.toList());
+        return orders.stream().map(o -> OrderEntry.builder().id(o.getId()).broker(o.getBroker()).client(o.getClient())
+                .amount(o.getDetails().getAmount()).price(o.getDetails().getPrice()).build()).collect(Collectors.toList());
     }
 }

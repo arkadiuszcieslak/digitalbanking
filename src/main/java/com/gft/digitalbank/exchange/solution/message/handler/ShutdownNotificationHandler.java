@@ -1,6 +1,5 @@
 package com.gft.digitalbank.exchange.solution.message.handler;
 
-import com.gft.digitalbank.exchange.model.orders.MessageType;
 import com.gft.digitalbank.exchange.model.orders.ShutdownNotification;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 
@@ -9,19 +8,15 @@ import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
  * 
  * @author Arkadiusz Cieslak
  */
-public class ShutdownNotificationHandler extends AbstractMessageHandler<ShutdownNotification> {
+public class ShutdownNotificationHandler implements MessageHandler<ShutdownNotification> {
 
-    /**
-     * Constructor.
-     * 
-     * @param transactionEngine ref to TransactionEngine
-     */
-    public ShutdownNotificationHandler(TransactionEngine transactionEngine) {
-        super(transactionEngine, MessageType.SHUTDOWN_NOTIFICATION, ShutdownNotification.class);
+    @Override
+    public void handleMessage(TransactionEngine transactionEngine, ShutdownNotification brokerMessage) {
+        transactionEngine.onBrokerMessage(brokerMessage);
     }
 
     @Override
-    protected void handleMessage(ShutdownNotification brokerMessage) {
-        transactionEngine.onBrokerMessage(brokerMessage);
+    public Class<ShutdownNotification> getMessageClass() {
+        return ShutdownNotification.class;
     }
 }
