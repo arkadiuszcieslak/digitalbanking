@@ -9,14 +9,14 @@ import com.google.common.base.Preconditions;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j;
+//import lombok.extern.log4j.Log4j;
 
 /**
  * Abstract message processor.
  * 
  * @author Arkadiusz Cieslak
  */
-@Log4j
+//@Log4j
 public abstract class AbstractProcessor {
     
     /** Factory for establishing connection to JMS broker */
@@ -57,7 +57,7 @@ public abstract class AbstractProcessor {
      * @param destinations destination list
      */
     public void start() {
-        log.info("Starting " + processorName);
+//        log.info("Starting " + processorName);
         
         Preconditions.checkNotNull(connectionFactory, "ConnectionFactory not set");
         Preconditions.checkNotNull(transactionEngine, "TransactionEngine not set");
@@ -73,7 +73,7 @@ public abstract class AbstractProcessor {
      * Method stops order processors. If processor didn't run throws RuntimeException.
      */
     public void stop() {
-        log.info("Stopping " + processorName);
+//        log.info("Stopping " + processorName);
         
         Preconditions.checkState(started, processorName + " not started");
         
