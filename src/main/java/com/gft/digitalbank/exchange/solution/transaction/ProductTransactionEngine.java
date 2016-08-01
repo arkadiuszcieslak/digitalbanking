@@ -53,13 +53,13 @@ public class ProductTransactionEngine {
     @SuppressWarnings("unchecked")
     private SortedSet<PositionOrder> sellOrders = new TreeSet<>(new ComparatorChain(Arrays.asList(COMPARE_BY_PRICE, COMPARE_BY_TIMESTAMP)));
 
-    /** Serial executor which queues tasks in order of submitions */
+    /** Serial executor which queues tasks in order of submissions */
     private Executor executor;
     
     /** Flag indicates that engine is active */
     private boolean active = true;
     
-    /** OrderBook build on buy and sell enries */
+    /** OrderBook build on buy and sell entries */
     @Getter
     private OrderBook orderBook;
 

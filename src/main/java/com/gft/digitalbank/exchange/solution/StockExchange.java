@@ -17,14 +17,14 @@ import com.gft.digitalbank.exchange.model.SolutionResult;
 import com.gft.digitalbank.exchange.solution.message.MessageProcessor;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 
-//import lombok.extern.log4j.Log4j;
+import lombok.extern.log4j.Log4j;
 
 /**
  * Implementation of Exchange interface.
  * 
  * @author Arkadiusz Cieslak
  */
-// @Log4j
+@Log4j
 public class StockExchange implements Exchange, Observer {
     
     /** Listener called at the end of processing */
@@ -98,7 +98,7 @@ public class StockExchange implements Exchange, Observer {
             
             connectionFactory = (ConnectionFactory) context.lookup("ConnectionFactory");
         } catch(NamingException e) {
-            // log.error("ConnectionFactory lookup failed: ", e);
+            log.error("ConnectionFactory lookup failed: ", e);
         }
     }
     

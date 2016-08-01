@@ -23,14 +23,14 @@ import com.gft.digitalbank.exchange.model.orders.ShutdownNotification;
 import com.gft.digitalbank.exchange.solution.util.MessageUtils;
 
 import lombok.EqualsAndHashCode;
-//import lombok.extern.log4j.Log4j;
+import lombok.extern.log4j.Log4j;
 
 /**
  * Class reperesents transaction engine for all products and brokers.
  * 
  * @author Arkadiusz Cieslak
  */
-//@Log4j
+@Log4j
 public class TransactionEngine extends Observable {
     
     /** Provided executor */
@@ -184,7 +184,7 @@ public class TransactionEngine extends Observable {
             notifyObservers();
             clearChanged();
         } catch (Exception e) {
-//            log.error("Error in method waitForTermination: ", e);
+            log.error("Error in method waitForTermination: ", e);
         }
     }
 
