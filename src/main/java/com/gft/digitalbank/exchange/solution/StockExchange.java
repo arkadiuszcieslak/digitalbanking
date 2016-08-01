@@ -1,6 +1,8 @@
 package com.gft.digitalbank.exchange.solution;
 
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -12,7 +14,6 @@ import javax.naming.NamingException;
 import com.gft.digitalbank.exchange.Exchange;
 import com.gft.digitalbank.exchange.listener.ProcessingListener;
 import com.gft.digitalbank.exchange.model.SolutionResult;
-import com.gft.digitalbank.exchange.solution.listener.BrokerShutdownListener;
 import com.gft.digitalbank.exchange.solution.message.MessageProcessor;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 
@@ -24,7 +25,7 @@ import lombok.extern.log4j.Log4j;
  * @author Arkadiusz Cieslak
  */
 @Log4j
-public class StockExchange implements Exchange {
+public class StockExchange implements Exchange, Observer {
     
     /** Listener called at the end of processing */
     private ProcessingListener processingListener;
@@ -40,9 +41,6 @@ public class StockExchange implements Exchange {
 
     /** TransactionEngine reference */
     private TransactionEngine transactionEngine;
-    
-    /** Broker shutdown listener */
-    private BrokerShutdownListener brokerShutdownListener; 
     
     /** Executor pool */
     private ExecutorService executor;
@@ -70,29 +68,21 @@ public class StockExchange implements Exchange {
         setUpConnectionFactory();
         setUpExecutor();
         setUpTransactionEngine();
-        setUpBrokerShutdownListener();
+        setUpTransactionEngineShutdownListener();
         setUpMessageProcessor();
         
         messageProcessor.start();
     }
     
-    /**
-     * Shutdown the broker.
-     * 
-     * @param brokerName name of the broker
-     */
-    public void shutdownBroker(String brokerName) {
-        destinations.remove(brokerName);
-        
-        if (destinations.isEmpty()) {
-            SolutionResult solution = transactionEngine.createSolutionResult();
+    @Override
+    public void update(Observable o, Object arg) {
+        SolutionResult solution = transactionEngine.createSolutionResult();
 
-            transactionEngine.deleteObserver(brokerShutdownListener);
-            transactionEngine.shutdown();
-            messageProcessor.stop();
-            executor.shutdown();
-            processingListener.processingDone(solution);
-        }
+        transactionEngine.deleteObserver(this);
+        transactionEngine.shutdown();
+        messageProcessor.stop();
+        executor.shutdown();
+        processingListener.processingDone(solution);
     }
     
     /**
@@ -125,14 +115,11 @@ public class StockExchange implements Exchange {
      * Method creates TransactionEngine instance.
      */
     private void setUpTransactionEngine() {
-        transactionEngine = new TransactionEngine(executor);
+        transactionEngine = new TransactionEngine(executor, destinations);
     }
     
-    private void setUpBrokerShutdownListener() {
-        brokerShutdownListener = new BrokerShutdownListener();
-        
-        brokerShutdownListener.setStockExchange(this);
-        transactionEngine.addObserver(brokerShutdownListener);
+    private void setUpTransactionEngineShutdownListener() {
+        transactionEngine.addObserver(this);
     }
     
     /**

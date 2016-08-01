@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
@@ -54,6 +55,13 @@ public class ProductTransactionEngine {
 
     /** Serial executor which queues tasks in order of submitions */
     private Executor executor;
+    
+    /** Flag indicates that engine is active */
+    private boolean active = true;
+    
+    /** OrderBook build on buy and sell enries */
+    @Getter
+    private OrderBook orderBook;
 
     /**
      * Constructor.
@@ -67,19 +75,15 @@ public class ProductTransactionEngine {
     }
 
     /**
-     * Shutdowns engine.
-     */
-    public void shutdown() {
-        buyOrders.clear();
-        sellOrders.clear();
-    }
-
-    /**
      * Submits in executor processing of PositionOrder.
      * 
      * @param order PositionOrder
      */
     public void onPositionOrder(final PositionOrder order) {
+        if(! active) {
+            return;
+        }
+
         executor.execute(() -> {
             addPositionOrder(order);
             processTransactions();
@@ -92,6 +96,10 @@ public class ProductTransactionEngine {
      * @param order PositionOrder
      */
     public void onCancellOrder(final PositionOrder order) {
+        if(! active) {
+            return;
+        }
+
         executor.execute(() -> {
             removePositionOrder(order);
             processTransactions();
@@ -105,10 +113,30 @@ public class ProductTransactionEngine {
      * @param newOrder modified PositionOrder
      */
     public void onModifyOrder(final PositionOrder oldOrder, final PositionOrder newOrder) {
+        if(! active) {
+            return;
+        }
+
         executor.execute(() -> {
             removePositionOrder(oldOrder);
             addPositionOrder(newOrder);
             processTransactions();
+        });
+    }
+    
+    /**
+     * Submits in executor processing of Shutdown notification.
+     * 
+     * @param doneSignal synchronizing object for all engines
+     */
+    public void onShutdown(final CountDownLatch doneSignal) {
+        executor.execute(() -> {
+            toOrderBook();
+            buyOrders.clear();
+            sellOrders.clear();
+            active = false;
+            
+            doneSignal.countDown();
         });
     }
 
@@ -176,15 +204,18 @@ public class ProductTransactionEngine {
         }
     }
 
-    public OrderBook toOrderBook() {
+    /**
+     * Method converts buy and sell entries to order book.
+     */
+    private void toOrderBook() {
         List<OrderEntry> buyEntries = toOrderEntries(buyOrders);
         List<OrderEntry> sellEntries = toOrderEntries(sellOrders);
 
         if (buyEntries.isEmpty() && sellEntries.isEmpty()) {
-            return null;
+            return;
         }
 
-        return new OrderBook(getProductName(), buyEntries, sellEntries);
+        orderBook = new OrderBook(getProductName(), buyEntries, sellEntries);
     }
 
     /**

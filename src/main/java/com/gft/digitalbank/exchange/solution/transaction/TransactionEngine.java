@@ -2,10 +2,14 @@ package com.gft.digitalbank.exchange.solution.transaction;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
@@ -19,12 +23,14 @@ import com.gft.digitalbank.exchange.model.orders.ShutdownNotification;
 import com.gft.digitalbank.exchange.solution.util.MessageUtils;
 
 import lombok.EqualsAndHashCode;
+import lombok.extern.log4j.Log4j;
 
 /**
  * Class reperesents transaction engine for all products and brokers.
  * 
  * @author Arkadiusz Cieslak
  */
+@Log4j
 public class TransactionEngine extends Observable {
     
     /** Provided executor */
@@ -34,18 +40,25 @@ public class TransactionEngine extends Observable {
     private List<Transaction> transactions = new ArrayList<>();
 
     /** Map of product transaction engines (identified by product name) */
-    private Map<String, ProductTransactionEngine> productEngines = new ConcurrentHashMap<>();
+    private Map<String, ProductTransactionEngine> productEngines = new HashMap<>();
 
     /** Index of position orders (identified by OrderId) */
     private Map<OrderId, PositionOrder> positionOrderIdx = new ConcurrentHashMap<>();
+    
+    /** Set of active destinations */
+    private Set<String> activeDestinations = new HashSet<>();
     
     /**
      * Constructor.
      * 
      * @param executor provided executor
      */
-    public TransactionEngine(Executor executor) {
+    public TransactionEngine(Executor executor, Collection<String> destinations) {
         this.executor = executor;
+        
+        if (destinations != null) {
+            this.activeDestinations.addAll(destinations);
+        }
     }
 
     /**
@@ -65,10 +78,6 @@ public class TransactionEngine extends Observable {
      * Shutdowns engine.
      */
     public void shutdown() {
-        productEngines.values()
-            .stream()
-            .forEach(pte -> pte.shutdown());
-
         transactions.clear();
         productEngines.clear();
         positionOrderIdx.clear();
@@ -138,9 +147,45 @@ public class TransactionEngine extends Observable {
      * @param message ShutdownNotification message
      */
     public void onBrokerMessage(final ShutdownNotification message) {
-        setChanged();
-        notifyObservers(message.getBroker());
-        clearChanged();
+        activeDestinations.remove(message.getBroker());
+        
+        if (activeDestinations.isEmpty()) {
+            executor.execute(() -> {
+                CountDownLatch doneSignal = new CountDownLatch(productEngines.keySet().size());
+
+                shutdownAllProductEngines(doneSignal);
+                waitForTermination(doneSignal);
+            }); 
+        }
+    }
+    
+    /**
+     * Send shutdown signal to all product engines.
+     * 
+     * @param doneSignal synchronizing object for all engines
+     */
+    private void shutdownAllProductEngines(CountDownLatch doneSignal) {
+        productEngines
+            .values()
+            .stream()
+            .forEach(pte -> pte.onShutdown(doneSignal));
+    }
+    
+    /**
+     * Method waits for termination of product engines and shutdowns stock exchange.
+     * 
+     * @param doneSignal synchronizing object for all engines
+     */
+    private void waitForTermination(CountDownLatch doneSignal) {
+        try {
+            doneSignal.await();
+            
+            setChanged();
+            notifyObservers();
+            clearChanged();
+        } catch (Exception e) {
+            log.error("Error in method waitForTermination: ", e);
+        }
     }
 
     /**
@@ -151,13 +196,17 @@ public class TransactionEngine extends Observable {
      * @return ProductTransactionEngine identified by product name
      */
     private ProductTransactionEngine getProductTransactionEngine(final String productName) {
-        ProductTransactionEngine pte = productEngines.get(productName);
+        ProductTransactionEngine pte = null;
 
-        if (pte == null) {
-            pte = new ProductTransactionEngine(productName, executor);
+        synchronized (productEngines) {
+            pte = productEngines.get(productName);
             
-            pte.setTransactionEngine(this);
-            productEngines.put(productName, pte);
+            if (pte == null) {
+                pte = new ProductTransactionEngine(productName, executor);
+                
+                pte.setTransactionEngine(this);
+                productEngines.put(productName, pte);
+            }
         }
 
         return pte;
@@ -201,7 +250,7 @@ public class TransactionEngine extends Observable {
     private Collection<? extends OrderBook> createOrderBooks() {
         return productEngines.values()
                 .stream()
-                .map(ProductTransactionEngine::toOrderBook)
+                .map(ProductTransactionEngine::getOrderBook)
                 .filter(o -> o != null)
                 .collect(Collectors.toSet());
     }
