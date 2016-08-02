@@ -196,20 +196,9 @@ public class TransactionEngine extends Observable {
      * @return ProductTransactionEngine identified by product name
      */
     private ProductTransactionEngine getProductTransactionEngine(final String productName) {
-        ProductTransactionEngine pte = null;
-
         synchronized (productEngines) {
-            pte = productEngines.get(productName);
-            
-            if (pte == null) {
-                pte = new ProductTransactionEngine(productName, executor);
-                
-                pte.setTransactionEngine(this);
-                productEngines.put(productName, pte);
-            }
+            return productEngines.computeIfAbsent(productName, k -> new ProductTransactionEngine(k, this, executor));
         }
-
-        return pte;
     }
 
     /**

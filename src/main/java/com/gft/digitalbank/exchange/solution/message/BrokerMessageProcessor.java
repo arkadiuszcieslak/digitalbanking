@@ -37,8 +37,11 @@ public class BrokerMessageProcessor extends AbstractProcessor {
         messageListenerContainer = new DefaultMessageListenerContainer();
         messageListenerContainer.setConnectionFactory(connectionFactory);
         messageListenerContainer.setDestinationName(destinationName);
-        messageListenerContainer.setSessionAcknowledgeMode(Session.CLIENT_ACKNOWLEDGE);
-        messageListenerContainer.setMessageListener(new OrderMessageListener(transactionEngine));
+        messageListenerContainer.setAutoStartup(false);
+        messageListenerContainer.setConcurrency("1-1");
+        messageListenerContainer.setReceiveTimeout(1000L);
+        messageListenerContainer.setSessionAcknowledgeMode(Session.AUTO_ACKNOWLEDGE);
+        messageListenerContainer.setMessageListener(new OrderMessageListener(transactionEngine, this));
         
         if(executor != null)
             messageListenerContainer.setTaskExecutor(executor);

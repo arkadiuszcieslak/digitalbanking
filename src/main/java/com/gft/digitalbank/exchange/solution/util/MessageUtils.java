@@ -13,7 +13,6 @@ import com.gft.digitalbank.exchange.model.orders.PositionOrder;
  * @author Arkadiusz Cieslak
  */
 public final class MessageUtils {
-    private static final AtomicInteger TRANSACTION_ID_GENERATOR = new AtomicInteger(0);
 
     /**
      * Private constructor.
@@ -44,12 +43,13 @@ public final class MessageUtils {
     /**
      * Method tries to create transaction based on buy and sell order.
      * 
+     * @param idGenerator transaction id generator
      * @param buyOrder buy order
      * @param sellOrder sell order
      * 
      * @return new transaction or null if buy and sell orders didn't match for transaction
      */
-    public static Transaction tryCreateTransaction(PositionOrder buyOrder, PositionOrder sellOrder) {
+    public static Transaction tryCreateTransaction(AtomicInteger idGenerator, PositionOrder buyOrder, PositionOrder sellOrder) {
         if (buyOrder == null || sellOrder == null) {
             return null;
         }
@@ -68,7 +68,7 @@ public final class MessageUtils {
         int price = buyOrder.getTimestamp() < sellOrder.getTimestamp() ? buyDetails.getPrice() : sellDetails.getPrice();
         int amount = Integer.min(buyDetails.getAmount(), sellDetails.getAmount());
 
-        return Transaction.builder().id(TRANSACTION_ID_GENERATOR.incrementAndGet())
+        return Transaction.builder().id(idGenerator.incrementAndGet())
                 .amount(amount).brokerBuy(buyOrder.getBroker()).brokerSell(sellOrder.getBroker()).clientBuy(buyOrder.getClient())
                 .clientSell(sellOrder.getClient()).price(price).product(buyOrder.getProduct()).build();
     }

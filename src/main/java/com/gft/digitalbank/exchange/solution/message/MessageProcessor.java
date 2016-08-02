@@ -59,8 +59,6 @@ public class MessageProcessor extends AbstractProcessor {
     
     @Override
     protected void doStop() {
-        brokerProcessors
-            .values()
-            .forEach(p -> p.stop());
+        brokerProcessors.clear();
     }
 }

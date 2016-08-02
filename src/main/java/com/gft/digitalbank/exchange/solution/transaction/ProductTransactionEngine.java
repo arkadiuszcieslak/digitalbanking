@@ -8,6 +8,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections.comparators.ComparatorChain;
@@ -20,7 +21,6 @@ import com.gft.digitalbank.exchange.solution.util.MessageUtils;
 import com.gft.digitalbank.exchange.solution.util.SerialExecutor;
 
 import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Transaction engine for single product.
@@ -41,8 +41,7 @@ public class ProductTransactionEngine {
     private String productName;
 
     /** Reference to transaction engine */
-    @Setter
-    private TransactionEngine transactionEngine;
+    private final TransactionEngine transactionEngine;
 
     /** Sorted set of buy orders */
     @SuppressWarnings("unchecked")
@@ -62,15 +61,20 @@ public class ProductTransactionEngine {
     /** OrderBook build on buy and sell entries */
     @Getter
     private OrderBook orderBook;
+    
+    /** Id generator for transactions */
+    private final AtomicInteger transactionIdGenerator = new AtomicInteger(0);
 
     /**
      * Constructor.
      * 
      * @param productName name of the product
+     * @param engine reference to transaction engine
      * @param executor provided executor
      */
-    public ProductTransactionEngine(final String productName, Executor executor) {
+    public ProductTransactionEngine(final String productName, final TransactionEngine engine, Executor executor) {
         this.productName = productName;
+        this.transactionEngine = engine;
         this.executor = new SerialExecutor(executor);
     }
 
@@ -180,7 +184,7 @@ public class ProductTransactionEngine {
             PositionOrder buy = buyOrders.first();
             PositionOrder sell = sellOrders.first();
 
-            Transaction t = MessageUtils.tryCreateTransaction(buy, sell);
+            Transaction t = MessageUtils.tryCreateTransaction(transactionIdGenerator, buy, sell);
 
             if (t == null) {
                 break;

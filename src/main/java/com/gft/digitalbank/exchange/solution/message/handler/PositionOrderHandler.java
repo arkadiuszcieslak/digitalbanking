@@ -1,6 +1,7 @@
 package com.gft.digitalbank.exchange.solution.message.handler;
 
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
+import com.gft.digitalbank.exchange.solution.message.BrokerMessageProcessor;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 
 /**
@@ -11,7 +12,7 @@ import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 public class PositionOrderHandler implements MessageHandler<PositionOrder> {
 
     @Override
-    public void handleMessage(TransactionEngine transactionEngine, PositionOrder brokerMessage) {
+    public void handleMessage(TransactionEngine transactionEngine, BrokerMessageProcessor processor, PositionOrder brokerMessage) {
         transactionEngine.onBrokerMessage(brokerMessage);
     }
 

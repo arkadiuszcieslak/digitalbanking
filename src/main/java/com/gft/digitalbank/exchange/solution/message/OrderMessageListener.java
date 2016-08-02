@@ -30,6 +30,8 @@ public class OrderMessageListener implements SessionAwareMessageListener<TextMes
     /** Reference to TransactionEngine */
     private final TransactionEngine transactionEngine;
 
+    private final BrokerMessageProcessor brokerMessageProcessor;
+
     /** Map of MessageHandlers identified by handled MessageType */
     private static final Map<MessageType, MessageHandler<? extends BrokerMessage>> MESSAGE_HANDLERS = new HashMap<>();
 
@@ -43,8 +45,9 @@ public class OrderMessageListener implements SessionAwareMessageListener<TextMes
     /**
      * Constructor.
      */
-    public OrderMessageListener(TransactionEngine transactionEngine) {
+    public OrderMessageListener(TransactionEngine transactionEngine, BrokerMessageProcessor processor) {
         this.transactionEngine = transactionEngine;
+        this.brokerMessageProcessor = processor;
     }
 
     @Override
@@ -59,8 +62,7 @@ public class OrderMessageListener implements SessionAwareMessageListener<TextMes
         BrokerMessage bm = deserializeBrokerMessage(message.getText(), handler.getMessageClass());
         Preconditions.checkNotNull(bm, "BrokerMessage is null");
 
-        handler.handleMessage(transactionEngine, bm);
-        message.acknowledge();
+        handler.handleMessage(transactionEngine, brokerMessageProcessor, bm);
     }
 
     private <T extends BrokerMessage> T deserializeBrokerMessage(String serializedObj, Class<T> messageClass) {

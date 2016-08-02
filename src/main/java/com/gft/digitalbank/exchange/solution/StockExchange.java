@@ -81,7 +81,7 @@ public class StockExchange implements Exchange, Observer {
         transactionEngine.deleteObserver(this);
         transactionEngine.shutdown();
         messageProcessor.stop();
-        executor.shutdown();
+        executor.shutdownNow();
         processingListener.processingDone(solution);
     }
     
