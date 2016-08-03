@@ -1,5 +1,6 @@
 package com.gft.digitalbank.exchange.solution.transaction;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -9,7 +10,6 @@ import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import org.apache.commons.collections.comparators.ComparatorChain;
 
@@ -62,7 +62,7 @@ public class ProductTransactionEngine {
     @Getter
     private OrderBook orderBook;
     
-    /** Id generator for transactions */
+    /** Id generator for product transactions */
     private final AtomicInteger transactionIdGenerator = new AtomicInteger(0);
 
     /**
@@ -230,7 +230,14 @@ public class ProductTransactionEngine {
      * @return list of OrderEntries
      */
     private List<OrderEntry> toOrderEntries(Collection<PositionOrder> orders) {
-        return orders.stream().map(o -> OrderEntry.builder().id(o.getId()).broker(o.getBroker()).client(o.getClient())
-                .amount(o.getDetails().getAmount()).price(o.getDetails().getPrice()).build()).collect(Collectors.toList());
+        int i = 0;
+        List<OrderEntry> list = new ArrayList<>(orders.size());
+        
+        for (PositionOrder o : orders) {
+            list.add(OrderEntry.builder().id(++i).broker(o.getBroker()).client(o.getClient())
+                .amount(o.getDetails().getAmount()).price(o.getDetails().getPrice()).build());
+        }
+        
+        return list;
     }
 }
