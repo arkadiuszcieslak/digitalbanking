@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.gft.digitalbank.exchange.model.OrderDetails;
 import com.gft.digitalbank.exchange.model.Transaction;
 import com.gft.digitalbank.exchange.model.orders.BrokerMessage;
+import com.gft.digitalbank.exchange.model.orders.ModificationOrder;
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
 
 /**
@@ -65,7 +66,7 @@ public final class MessageUtils {
             return null;
         }
 
-        int price = buyOrder.getTimestamp() < sellOrder.getTimestamp() ? buyDetails.getPrice() : sellDetails.getPrice();
+        int price = buyOrder.getTimestamp() <= sellOrder.getTimestamp() ? buyDetails.getPrice() : sellDetails.getPrice();
         int amount = Integer.min(buyDetails.getAmount(), sellDetails.getAmount());
 
         return Transaction.builder().id(idGenerator.incrementAndGet())
@@ -81,13 +82,13 @@ public final class MessageUtils {
      * 
      * @return new order object with new details
      */
-    public static PositionOrder modifyPositionOrderDetails(final PositionOrder order, final OrderDetails newDetails) {
+    public static PositionOrder modifyPositionOrderDetails(final PositionOrder order, final ModificationOrder modificationOrder) {
         if (order == null) {
             return null;
         }
 
         return PositionOrder.builder().id(order.getId()).broker(order.getBroker()).client(order.getClient()).product(order.getProduct())
-                .side(order.getSide()).timestamp(order.getTimestamp()).details(newDetails).build();
+                .side(order.getSide()).timestamp(modificationOrder.getTimestamp()).details(modificationOrder.getDetails()).build();
     }
 
     /**
