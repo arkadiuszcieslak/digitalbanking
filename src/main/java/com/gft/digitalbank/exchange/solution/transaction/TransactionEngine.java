@@ -22,8 +22,8 @@ import com.gft.digitalbank.exchange.model.orders.ModificationOrder;
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
 import com.gft.digitalbank.exchange.model.orders.ShutdownNotification;
 import com.gft.digitalbank.exchange.solution.util.MessageUtils;
+import com.gft.digitalbank.exchange.solution.util.OrderId;
 
-import lombok.EqualsAndHashCode;
 import lombok.extern.log4j.Log4j;
 
 /**
@@ -241,16 +241,5 @@ public class TransactionEngine extends Observable {
                 .map(ProductTransactionEngine::getOrderBook)
                 .filter(o -> o != null)
                 .collect(Collectors.toSet());
-    }
-
-    @EqualsAndHashCode
-    private final class OrderId {
-        private final int id;
-        private final String broker;
-        
-        public OrderId(int id, String broker) {
-            this.id = id;
-            this.broker = broker;
-        }
     }
 }
