@@ -1,8 +1,10 @@
 package com.gft.digitalbank.exchange.solution.message;
 
+import javax.jms.Connection;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.MessageConsumer;
 import javax.jms.Session;
-
-import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -17,9 +19,10 @@ public class BrokerMessageProcessor extends AbstractProcessor {
     /** Destination name */
     @Getter
     private String destinationName;
-
-    /** Message listener container */
-    private DefaultMessageListenerContainer messageListenerContainer;
+    
+    private Connection connection;
+    
+    private Session session;
 
     /**
      * Constructor.
@@ -34,24 +37,32 @@ public class BrokerMessageProcessor extends AbstractProcessor {
 
     @Override
     protected void doStart() {
-        messageListenerContainer = new DefaultMessageListenerContainer();
-        messageListenerContainer.setConnectionFactory(connectionFactory);
-        messageListenerContainer.setDestinationName(destinationName);
-        messageListenerContainer.setAutoStartup(false);
-        messageListenerContainer.setConcurrency("1-1");
-        messageListenerContainer.setReceiveTimeout(1000L);
-        messageListenerContainer.setSessionAcknowledgeMode(Session.AUTO_ACKNOWLEDGE);
-        messageListenerContainer.setMessageListener(new OrderMessageListener(transactionEngine, this));
-        
-        if(executor != null)
-            messageListenerContainer.setTaskExecutor(executor);
-        
-        messageListenerContainer.initialize();
-        messageListenerContainer.start();
+        try {
+            connection = connectionFactory.createConnection();
+            
+            connection.start();
+            
+            session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+            
+            Destination     destination = session.createQueue( destinationName);
+            MessageConsumer consumer    = session.createConsumer( destination);
+            
+            consumer.setMessageListener(new OrderMessageListener(transactionEngine, this));
+        } catch (JMSException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     @Override
     protected void doStop() {
-        messageListenerContainer.stop();
+        try {
+            session.close();
+            connection.close();
+        } catch (JMSException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
     }
 }
