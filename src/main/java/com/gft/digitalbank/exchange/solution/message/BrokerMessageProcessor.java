@@ -8,20 +8,24 @@ import javax.jms.Session;
 
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.extern.log4j.Log4j;
 
 /**
  * Class processes orders coming from single JMS Broker.
  * 
  * @author Arkadiusz Cieslak
  */
+@Log4j
 public class BrokerMessageProcessor extends AbstractProcessor {
 
     /** Destination name */
     @Getter
     private String destinationName;
     
+    /** Reference to JSM connection object */
     private Connection connection;
     
+    /** Reference to JSM session object */
     private Session session;
 
     /**
@@ -49,8 +53,7 @@ public class BrokerMessageProcessor extends AbstractProcessor {
             
             consumer.setMessageListener(new OrderMessageListener(transactionEngine, this));
         } catch (JMSException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            log.error("JMSException in method doStart", e);
         }
     }
 
@@ -60,8 +63,7 @@ public class BrokerMessageProcessor extends AbstractProcessor {
             session.close();
             connection.close();
         } catch (JMSException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            log.error("JMSException in method doStop", e);
         }
         
     }
