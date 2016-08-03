@@ -55,9 +55,6 @@ public class ProductTransactionEngine {
     /** Serial executor which queues tasks in order of submissions */
     private Executor executor;
     
-    /** Flag indicates that engine is active */
-    private boolean active = true;
-    
     /** OrderBook build on buy and sell entries */
     @Getter
     private OrderBook orderBook;
@@ -84,10 +81,6 @@ public class ProductTransactionEngine {
      * @param order PositionOrder
      */
     public void onPositionOrder(final PositionOrder order) {
-        if(! active) {
-            return;
-        }
-
         executor.execute(() -> {
             addPositionOrder(order);
             processTransactions();
@@ -100,10 +93,6 @@ public class ProductTransactionEngine {
      * @param order PositionOrder
      */
     public void onCancellOrder(final PositionOrder order) {
-        if(! active) {
-            return;
-        }
-
         executor.execute(() -> {
             removePositionOrder(order);
             processTransactions();
@@ -117,10 +106,6 @@ public class ProductTransactionEngine {
      * @param newOrder modified PositionOrder
      */
     public void onModifyOrder(final PositionOrder oldOrder, final PositionOrder newOrder) {
-        if(! active) {
-            return;
-        }
-
         executor.execute(() -> {
             removePositionOrder(oldOrder);
             addPositionOrder(newOrder);
@@ -138,7 +123,6 @@ public class ProductTransactionEngine {
             toOrderBook();
             buyOrders.clear();
             sellOrders.clear();
-            active = false;
             
             doneSignal.countDown();
         });
