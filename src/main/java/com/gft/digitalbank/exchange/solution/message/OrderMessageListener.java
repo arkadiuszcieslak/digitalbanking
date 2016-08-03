@@ -29,7 +29,11 @@ public class OrderMessageListener implements MessageListener {
     /** Reference to TransactionEngine */
     private final TransactionEngine transactionEngine;
 
+    /** Reference to BrokerMessageProcessor object */
     private final BrokerMessageProcessor brokerMessageProcessor;
+
+    /** Static object for deserializing JSON data */
+    private static final Gson GSON = new Gson();
 
     /** Map of MessageHandlers identified by handled MessageType */
     private static final Map<MessageType, MessageHandler<? extends BrokerMessage>> MESSAGE_HANDLERS = new HashMap<>();
@@ -73,6 +77,6 @@ public class OrderMessageListener implements MessageListener {
     }
 
     private <T extends BrokerMessage> T deserializeBrokerMessage(String serializedObj, Class<T> messageClass) {
-        return new Gson().fromJson(serializedObj, messageClass);
+        return GSON.fromJson(serializedObj, messageClass);
     }
 }
