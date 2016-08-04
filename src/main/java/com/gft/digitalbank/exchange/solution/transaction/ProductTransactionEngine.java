@@ -80,7 +80,7 @@ public class ProductTransactionEngine {
      * 
      * @param order PositionOrder
      */
-    public synchronized void onPositionOrder(final PositionOrder order) {
+    public void onPositionOrder(final PositionOrder order) {
         executor.execute(() -> {
             addPositionOrder(order);
             processTransactions();
@@ -92,7 +92,7 @@ public class ProductTransactionEngine {
      * 
      * @param order PositionOrder
      */
-    public synchronized void onCancellOrder(final PositionOrder order) {
+    public void onCancellOrder(final PositionOrder order) {
         executor.execute(() -> {
             removePositionOrder(order);
             processTransactions();
@@ -105,7 +105,7 @@ public class ProductTransactionEngine {
      * @param oldOrder old PositionOrder
      * @param newOrder modified PositionOrder
      */
-    public synchronized void onModifyOrder(final PositionOrder oldOrder, final PositionOrder newOrder) {
+    public void onModifyOrder(final PositionOrder oldOrder, final PositionOrder newOrder) {
         executor.execute(() -> {
             removePositionOrder(oldOrder);
             addPositionOrder(newOrder);
@@ -118,7 +118,7 @@ public class ProductTransactionEngine {
      * 
      * @param doneSignal synchronizing object for all engines
      */
-    public synchronized void onShutdown(final CountDownLatch doneSignal) {
+    public void onShutdown(final CountDownLatch doneSignal) {
         executor.execute(() -> {
             toOrderBook();
             buyOrders.clear();

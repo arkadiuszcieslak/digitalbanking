@@ -2,8 +2,10 @@ package com.gft.digitalbank.exchange.solution.message;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
+import com.gft.digitalbank.exchange.solution.util.SerialExecutor;
 import com.google.common.base.Preconditions;
 
 import lombok.Setter;
@@ -22,6 +24,8 @@ public class MessageProcessor extends AbstractProcessor {
     /** Map of broker processors identified by broker destination name */
     private Map<String, BrokerMessageProcessor> brokerProcessors;
     
+    private Executor serialExecutor;
+    
     /**
      * Default constructor.
      */
@@ -32,6 +36,8 @@ public class MessageProcessor extends AbstractProcessor {
     @Override
     protected void doStart() {
         Preconditions.checkNotNull(destinations, "Destinations not set");
+        
+        serialExecutor = new SerialExecutor(executor);
         
         brokerProcessors = destinations
                 .stream()
@@ -51,7 +57,7 @@ public class MessageProcessor extends AbstractProcessor {
         
         processor.setConnectionFactory(connectionFactory);
         processor.setTransactionEngine(transactionEngine);
-        processor.setExecutor(executor);
+        processor.setExecutor(serialExecutor);
         processor.start();
         
         return processor;
@@ -60,5 +66,6 @@ public class MessageProcessor extends AbstractProcessor {
     @Override
     protected void doStop() {
         brokerProcessors.clear();
+        serialExecutor = null;
     }
 }

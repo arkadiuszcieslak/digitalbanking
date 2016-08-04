@@ -2,6 +2,7 @@ package com.gft.digitalbank.exchange.solution.message;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -32,6 +33,9 @@ public class OrderMessageListener implements MessageListener {
     /** Reference to BrokerMessageProcessor object */
     private final BrokerMessageProcessor brokerMessageProcessor;
 
+    /** Object for executing message handling mechanizm */
+    private Executor executor;
+
     /** Static object for deserializing JSON data */
     private static final Gson GSON = new Gson();
 
@@ -48,32 +52,34 @@ public class OrderMessageListener implements MessageListener {
     /**
      * Constructor.
      */
-    public OrderMessageListener(TransactionEngine transactionEngine, BrokerMessageProcessor processor) {
+    public OrderMessageListener(TransactionEngine transactionEngine, BrokerMessageProcessor processor, Executor executor) {
         this.transactionEngine = transactionEngine;
         this.brokerMessageProcessor = processor;
+        this.executor = executor;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void onMessage(Message message) {
-        try {
-            Preconditions.checkArgument(message instanceof TextMessage, "Invalid message type");
+        executor.execute(() -> {
+            try {
+                Preconditions.checkArgument(message instanceof TextMessage, "Invalid message type");
 
-            MessageType mt = MessageType.valueOf(message.getStringProperty("messageType"));
-            Preconditions.checkNotNull(mt, "MessageType is null");
+                MessageType mt = MessageType.valueOf(message.getStringProperty("messageType"));
+                Preconditions.checkNotNull(mt, "MessageType is null");
 
-            MessageHandler<BrokerMessage> handler = (MessageHandler<BrokerMessage>) MESSAGE_HANDLERS.get(mt);
-            Preconditions.checkNotNull(handler, "MessageHandler is null");
+                MessageHandler<BrokerMessage> handler = (MessageHandler<BrokerMessage>) MESSAGE_HANDLERS.get(mt);
+                Preconditions.checkNotNull(handler, "MessageHandler is null");
 
-            BrokerMessage bm = deserializeBrokerMessage(((TextMessage) message).getText(), handler.getMessageClass());
-            Preconditions.checkNotNull(bm, "BrokerMessage is null");
+                BrokerMessage bm = deserializeBrokerMessage(((TextMessage) message).getText(), handler.getMessageClass());
+                Preconditions.checkNotNull(bm, "BrokerMessage is null");
 
-            handler.handleMessage(transactionEngine, brokerMessageProcessor, bm);
+                handler.handleMessage(transactionEngine, brokerMessageProcessor, bm);
 
-            message.acknowledge();
-        } catch (JMSException e) {
+            } catch (JMSException e) {
 
-        }
+            }
+        });
     }
 
     private <T extends BrokerMessage> T deserializeBrokerMessage(String serializedObj, Class<T> messageClass) {

@@ -2,7 +2,6 @@ package com.gft.digitalbank.exchange.solution.transaction;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -38,10 +37,10 @@ public class TransactionEngine extends Observable {
     private final Executor executor;
 
     /** List of transactions */
-    private List<Transaction> transactions = Collections.synchronizedList(new ArrayList<>());
+    private List<Transaction> transactions = new ArrayList<>();
 
     /** Map of product transaction engines (identified by product name) */
-    private Map<String, ProductTransactionEngine> productEngines = Collections.synchronizedMap(new HashMap<>());
+    private Map<String, ProductTransactionEngine> productEngines = new HashMap<>();
 
     /** Index of position orders (identified by OrderId) */
     private Map<OrderId, PositionOrder> positionOrderIdx = new ConcurrentHashMap<>();
