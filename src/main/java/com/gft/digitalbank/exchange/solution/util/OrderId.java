@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
  * 
  * @author Arkadiusz Cieslak
  */
-@EqualsAndHashCode
+@EqualsAndHashCode(callSuper = false, doNotUseGetters = false)
 public final class OrderId {
     private final int id;
     private final String broker;
