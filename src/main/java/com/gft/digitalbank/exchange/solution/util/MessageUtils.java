@@ -83,7 +83,7 @@ public final class MessageUtils {
      * @return new order object with new details
      */
     public static PositionOrder modifyPositionOrderDetails(final PositionOrder order, final ModificationOrder modificationOrder) {
-        if (order == null) {
+        if (order == null || !MessageUtils.sameBroker(order, modificationOrder)) {
             return null;
         }
 

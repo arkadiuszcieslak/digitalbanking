@@ -11,13 +11,13 @@ import java.util.concurrent.Executor;
  */
 public class SerialExecutor implements Executor {
     /** Queue of task to execute */
-    final Queue<Runnable> tasks = new ArrayDeque<Runnable>();
+    private final Queue<Runnable> tasks = new ArrayDeque<Runnable>();
 
     /** Real executor which this class wraps */
-    final Executor executor;
+    private final Executor executor;
 
     /** Active task */
-    Runnable activeTask;
+    private Runnable activeTask;
 
     /**
      * Constructor.

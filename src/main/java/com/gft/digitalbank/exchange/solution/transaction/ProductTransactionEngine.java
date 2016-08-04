@@ -207,7 +207,7 @@ public class ProductTransactionEngine {
     }
 
     /**
-     * Converts collection of PositionOrders to list of OrderEntries. Method synchronizes on the orders collection.
+     * Converts collection of PositionOrders to list of OrderEntries.
      * 
      * @param orders collection of PositionOrders
      * 

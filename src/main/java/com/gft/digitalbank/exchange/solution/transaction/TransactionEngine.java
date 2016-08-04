@@ -131,10 +131,11 @@ public class TransactionEngine extends Observable {
     public void onBrokerMessage(final ModificationOrder message) {
         PositionOrder order = getIndexPositionOrder(message.getModifiedOrderId(), message.getBroker());
 
-        if (MessageUtils.sameBroker(order, message)) {
+        PositionOrder newOrder = MessageUtils.modifyPositionOrderDetails(order, message);
+        
+        if (newOrder != null) {
             ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
-            PositionOrder newOrder = MessageUtils.modifyPositionOrderDetails(order, message);
-
+    
             pte.onModifyOrder(order, newOrder);
             
             removeIndexPositionOrder(order);
