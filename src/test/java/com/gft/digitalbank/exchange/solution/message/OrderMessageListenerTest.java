@@ -56,77 +56,53 @@ public class OrderMessageListenerTest {
 
     @Test
     public void testOnPositionMessage() {
-        try {
-            TextMessage message = Mockito.mock(TextMessage.class);
+        PositionOrder order = PositionOrder.builder().id(101).broker("b1").client("c1").product("p1").side(Side.BUY).timestamp(1)
+                .details(OrderDetails.builder().amount(1).price(1).build()).build();
 
-            PositionOrder order = PositionOrder.builder().id(101).broker("b1").client("c1").product("p1").side(Side.BUY).timestamp(1)
-                    .details(OrderDetails.builder().amount(1).price(1).build()).build();
+        testOnMessage(order);
 
-            Mockito.when(message.getStringProperty(OrderMessageListener.MESSAGE_TYPE_PROPERTY_NAME)).thenReturn(MessageType.ORDER.name());
-            Mockito.when(message.getText()).thenReturn(toJsonText(order));
-
-            listener.onMessage(message);
-
-            Mockito.verify(transactionEngine).onBrokerMessage(Mockito.eq(order));
-        } catch (JMSException e) {
-            Assert.assertTrue("JMSException thrown", false);
-        }
+        Mockito.verify(transactionEngine).onBrokerMessage(Mockito.eq(order));
     }
     
     @Test
     public void testOnCancelMessage() {
-        try {
-            TextMessage message = Mockito.mock(TextMessage.class);
-            
-            CancellationOrder order = CancellationOrder.builder().id(101).broker("b1").cancelledOrderId(1).messageType(MessageType.CANCEL)
-                    .timestamp(1).build();
-            
-            Mockito.when(message.getStringProperty(OrderMessageListener.MESSAGE_TYPE_PROPERTY_NAME)).thenReturn(MessageType.CANCEL.name());
-            Mockito.when(message.getText()).thenReturn(toJsonText(order));
-            
-            listener.onMessage(message);
-            
-            Mockito.verify(transactionEngine).onBrokerMessage(Mockito.eq(order));
-        } catch (JMSException e) {
-            Assert.assertTrue("JMSException thrown", false);
-        }
+        CancellationOrder order = CancellationOrder.builder().id(101).broker("b1").cancelledOrderId(1).messageType(MessageType.CANCEL)
+                .timestamp(1).build();
+
+        testOnMessage(order);
+
+        Mockito.verify(transactionEngine).onBrokerMessage(Mockito.eq(order));
     }
 
     @Test
     public void testOnModificationMessage() {
-        try {
-            TextMessage message = Mockito.mock(TextMessage.class);
+        ModificationOrder order = ModificationOrder.builder().id(101).broker("b1").modifiedOrderId(1)
+                .details(OrderDetails.builder().amount(1).price(10).build()).timestamp(1).build();
 
-            ModificationOrder order = ModificationOrder.builder().id(101).broker("b1").modifiedOrderId(1)
-                    .details(OrderDetails.builder().amount(1).price(10).build()).timestamp(1).build();
+        testOnMessage(order);
 
-            Mockito.when(message.getStringProperty(OrderMessageListener.MESSAGE_TYPE_PROPERTY_NAME))
-                    .thenReturn(MessageType.MODIFICATION.name());
-            Mockito.when(message.getText()).thenReturn(toJsonText(order));
-
-            listener.onMessage(message);
-
-            Mockito.verify(transactionEngine).onBrokerMessage(Mockito.eq(order));
-        } catch (JMSException e) {
-            Assert.assertTrue("JMSException thrown", false);
-        }
+        Mockito.verify(transactionEngine).onBrokerMessage(Mockito.eq(order));
     }
 
     @Test
     public void testOnShutdownMessage() {
+        ShutdownNotification order = ShutdownNotification.builder().id(101).broker("b1").timestamp(1).build();
+
+        testOnMessage(order);
+
+        Mockito.verify(transactionEngine).onBrokerMessage(Mockito.eq(order));
+        Mockito.verify(processor).stop();
+    }
+
+    private void testOnMessage(BrokerMessage order) {
         try {
             TextMessage message = Mockito.mock(TextMessage.class);
 
-            ShutdownNotification order = ShutdownNotification.builder().id(101).broker("b1").timestamp(1).build();
-
             Mockito.when(message.getStringProperty(OrderMessageListener.MESSAGE_TYPE_PROPERTY_NAME))
-                    .thenReturn(MessageType.SHUTDOWN_NOTIFICATION.name());
+                    .thenReturn(order.getMessageType().name());
             Mockito.when(message.getText()).thenReturn(toJsonText(order));
 
             listener.onMessage(message);
-
-            Mockito.verify(transactionEngine).onBrokerMessage(Mockito.eq(order));
-            Mockito.verify(processor).stop();
         } catch (JMSException e) {
             Assert.assertTrue("JMSException thrown", false);
         }
