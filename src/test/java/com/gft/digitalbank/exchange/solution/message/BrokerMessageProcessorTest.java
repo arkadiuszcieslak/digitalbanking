@@ -85,7 +85,7 @@ public class BrokerMessageProcessorTest {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testStopBefereStart() {
+    public void testStopBeforeStart() {
         processor.stop();
     }
 
