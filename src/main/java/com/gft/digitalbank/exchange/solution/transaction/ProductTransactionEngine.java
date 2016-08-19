@@ -92,7 +92,7 @@ public class ProductTransactionEngine {
      * 
      * @param order PositionOrder
      */
-    public void onCancellOrder(final PositionOrder order) {
+    public void onCancelOrder(final PositionOrder order) {
         executor.execute(() -> {
             removePositionOrder(order);
             processTransactions();

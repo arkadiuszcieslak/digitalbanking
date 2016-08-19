@@ -116,7 +116,7 @@ public class TransactionEngine extends Observable {
         if (MessageUtils.sameBroker(order, message)) {
             ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
 
-            pte.onCancellOrder(order);
+            pte.onCancelOrder(order);
 
             removeIndexPositionOrder(order);
         }
