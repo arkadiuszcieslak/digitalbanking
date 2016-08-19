@@ -42,6 +42,9 @@ public class OrderMessageListener implements MessageListener {
     /** Map of MessageHandlers identified by handled MessageType */
     private static final Map<MessageType, MessageHandler<? extends BrokerMessage>> MESSAGE_HANDLERS = new HashMap<>();
 
+    /** Name of property defining message type */
+    public static final String MESSAGE_TYPE_PROPERTY_NAME = "messageType";
+
     static {
         MESSAGE_HANDLERS.put(MessageType.CANCEL, new CancellationOrderHandler());
         MESSAGE_HANDLERS.put(MessageType.MODIFICATION, new ModificationOrderHandler());
@@ -65,7 +68,7 @@ public class OrderMessageListener implements MessageListener {
             try {
                 Preconditions.checkArgument(message instanceof TextMessage, "Invalid message type");
 
-                MessageType mt = MessageType.valueOf(message.getStringProperty("messageType"));
+                MessageType mt = MessageType.valueOf(message.getStringProperty(OrderMessageListener.MESSAGE_TYPE_PROPERTY_NAME));
                 Preconditions.checkNotNull(mt, "MessageType is null");
 
                 MessageHandler<BrokerMessage> handler = (MessageHandler<BrokerMessage>) MESSAGE_HANDLERS.get(mt);
