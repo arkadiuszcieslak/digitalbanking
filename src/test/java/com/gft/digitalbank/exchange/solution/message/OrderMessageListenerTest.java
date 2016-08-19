@@ -8,6 +8,7 @@ import javax.jms.TextMessage;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -20,6 +21,7 @@ import com.gft.digitalbank.exchange.model.orders.ModificationOrder;
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
 import com.gft.digitalbank.exchange.model.orders.ShutdownNotification;
 import com.gft.digitalbank.exchange.model.orders.Side;
+import com.gft.digitalbank.exchange.solution.SimpleExecutor;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 import com.google.gson.Gson;
 
@@ -32,7 +34,7 @@ public class OrderMessageListenerTest {
 
     private OrderMessageListener listener;
 
-    private Executor executor = (r) -> r.run();
+    private Executor executor = Mockito.spy(new SimpleExecutor());
 
     @Mock
     private BrokerMessageProcessor processor;
@@ -103,6 +105,8 @@ public class OrderMessageListenerTest {
             Mockito.when(message.getText()).thenReturn(toJsonText(order));
 
             listener.onMessage(message);
+
+            Mockito.verify(executor).execute(Matchers.any());
         } catch (JMSException e) {
             Assert.assertTrue("JMSException thrown", false);
         }
