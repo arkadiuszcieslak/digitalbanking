@@ -48,8 +48,8 @@ public class BrokerMessageProcessor extends AbstractProcessor {
             
             session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
             
-            Destination     destination = session.createQueue( destinationName);
-            MessageConsumer consumer    = session.createConsumer( destination);
+            Destination     destination = session.createQueue(destinationName);
+            MessageConsumer consumer    = session.createConsumer(destination);
             
             consumer.setMessageListener(new OrderMessageListener(transactionEngine, this, executor));
         } catch (JMSException e) {
