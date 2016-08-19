@@ -1,5 +1,6 @@
 package com.gft.digitalbank.exchange.solution.message;
 
+import java.util.Arrays;
 import java.util.concurrent.Executor;
 
 import javax.jms.Connection;
@@ -20,13 +21,13 @@ import org.mockito.MockitoAnnotations;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 
 /**
- * Unit tests for class BrokerMessageProcessor.
+ * Unit tests for class MessageProcessor.
  * 
  * @author Arkadiusz Cieslak
  */
-public class BrokerMessageProcessorTest {
+public class MessageProcessorTest {
 
-    private BrokerMessageProcessor processor;
+    private MessageProcessor processor;
 
     private Executor executor = (r) -> r.run();
 
@@ -60,11 +61,12 @@ public class BrokerMessageProcessorTest {
             Mockito.when(session.createQueue(destinationName)).thenReturn(destination);
             Mockito.when(session.createConsumer(destination)).thenReturn(consumer);
 
-            processor = new BrokerMessageProcessor(destinationName);
+            processor = new MessageProcessor();
 
             processor.setConnectionFactory(connectionFactory);
             processor.setExecutor(executor);
             processor.setTransactionEngine(transactionEngine);
+            processor.setDestinations(Arrays.asList(destinationName));
         } catch (JMSException e) {
         }
     }
@@ -77,8 +79,6 @@ public class BrokerMessageProcessorTest {
 
             Mockito.verify(connection).start();
             Mockito.verify(consumer).setMessageListener(Matchers.any());
-            Mockito.verify(connection).close();
-            Mockito.verify(session).close();
         } catch (JMSException e) {
             Assert.assertTrue("JMSException thrown", false);
         }
