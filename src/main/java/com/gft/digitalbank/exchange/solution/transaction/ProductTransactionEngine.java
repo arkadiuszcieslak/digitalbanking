@@ -83,7 +83,7 @@ public class ProductTransactionEngine {
     public void onPositionOrder(final PositionOrder order) {
         executor.execute(() -> {
             addPositionOrder(order);
-            executor.execute(() -> processTransactions());
+            processTransactions();
         });
     }
 
@@ -95,7 +95,7 @@ public class ProductTransactionEngine {
     public void onCancelOrder(final PositionOrder order) {
         executor.execute(() -> {
             removePositionOrder(order);
-            executor.execute(() -> processTransactions());
+            processTransactions();
         });
     }
 
@@ -109,7 +109,7 @@ public class ProductTransactionEngine {
         executor.execute(() -> {
             removePositionOrder(oldOrder);
             addPositionOrder(newOrder);
-            executor.execute(() -> processTransactions());
+            processTransactions();
         });
     }
     
