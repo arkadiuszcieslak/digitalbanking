@@ -22,7 +22,6 @@ import com.gft.digitalbank.exchange.model.orders.ModificationOrder;
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
 import com.gft.digitalbank.exchange.model.orders.ShutdownNotification;
 import com.gft.digitalbank.exchange.solution.util.MessageUtils;
-import com.gft.digitalbank.exchange.solution.util.OrderId;
 import com.gft.digitalbank.exchange.solution.util.SerialExecutor;
 
 import lombok.extern.log4j.Log4j;
@@ -47,8 +46,8 @@ public class TransactionEngine extends Observable {
     /** Map of product transaction engines (identified by product name) */
     private Map<String, ProductTransactionEngine> productEngines = new HashMap<>();
 
-    /** Index of position orders (identified by OrderId) */
-    private Map<OrderId, PositionOrder> positionOrderIdx = new HashMap<>();
+    /** Index of position orders (identified by Order id) */
+    private Map<Integer, PositionOrder> positionOrderIdx = new HashMap<>();
     
     /** Set of active destinations */
     private Set<String> activeDestinations = new HashSet<>();
@@ -178,7 +177,7 @@ public class TransactionEngine extends Observable {
      * @param message CancellationOrder message
      */
     private void processCancellationOrder(final CancellationOrder message) {
-        PositionOrder order = getIndexPositionOrder(message.getCancelledOrderId(), message.getBroker());
+        PositionOrder order = getIndexPositionOrder(message.getCancelledOrderId());
 
         if (MessageUtils.sameBroker(order, message)) {
             ProductTransactionEngine pte = getProductTransactionEngine(order.getProduct());
@@ -195,7 +194,7 @@ public class TransactionEngine extends Observable {
      * @param message ModificationOrder message
      */
     private void processModificationOrder(final ModificationOrder message) {
-        PositionOrder order = getIndexPositionOrder(message.getModifiedOrderId(), message.getBroker());
+        PositionOrder order = getIndexPositionOrder(message.getModifiedOrderId());
         PositionOrder newOrder = MessageUtils.modifyPositionOrderDetails(order, message);
         
         if (newOrder != null) {
@@ -254,7 +253,7 @@ public class TransactionEngine extends Observable {
      * @param order position order
      */
     private void addIndexPositionOrder(final PositionOrder order) {
-        positionOrderIdx.put(new OrderId(order.getId(), order.getBroker()), order);
+        positionOrderIdx.put(order.getId(), order);
     }
 
     /**
@@ -263,19 +262,18 @@ public class TransactionEngine extends Observable {
      * @param order position order
      */
     private void removeIndexPositionOrder(final PositionOrder order) {
-        positionOrderIdx.remove(new OrderId(order.getId(), order.getBroker()));
+        positionOrderIdx.remove(order.getId());
     }
 
     /**
      * Get object from index.
      * 
      * @param orderId order id
-     * @param broker name of broker
      * 
      * @return PositionOrder from index or null if not present
      */
-    private PositionOrder getIndexPositionOrder(final int orderId, String broker) {
-        return positionOrderIdx.get(new OrderId(orderId, broker));
+    private PositionOrder getIndexPositionOrder(final int orderId) {
+        return positionOrderIdx.get(orderId);
     }
     
     /**
