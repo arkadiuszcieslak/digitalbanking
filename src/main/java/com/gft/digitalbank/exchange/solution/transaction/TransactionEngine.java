@@ -2,13 +2,13 @@ package com.gft.digitalbank.exchange.solution.transaction;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
@@ -16,12 +16,14 @@ import java.util.stream.Collectors;
 import com.gft.digitalbank.exchange.model.OrderBook;
 import com.gft.digitalbank.exchange.model.SolutionResult;
 import com.gft.digitalbank.exchange.model.Transaction;
+import com.gft.digitalbank.exchange.model.orders.BrokerMessage;
 import com.gft.digitalbank.exchange.model.orders.CancellationOrder;
 import com.gft.digitalbank.exchange.model.orders.ModificationOrder;
 import com.gft.digitalbank.exchange.model.orders.PositionOrder;
 import com.gft.digitalbank.exchange.model.orders.ShutdownNotification;
 import com.gft.digitalbank.exchange.solution.util.MessageUtils;
 import com.gft.digitalbank.exchange.solution.util.OrderId;
+import com.gft.digitalbank.exchange.solution.util.SerialExecutor;
 
 import lombok.extern.log4j.Log4j;
 
@@ -36,6 +38,9 @@ public class TransactionEngine extends Observable {
     /** Provided executor */
     private final Executor executor;
 
+    /** Executor for processing messageBuffer */
+    private final Executor messageBufferProcessingExecutor;
+
     /** List of transactions */
     private List<Transaction> transactions = new ArrayList<>();
 
@@ -43,10 +48,16 @@ public class TransactionEngine extends Observable {
     private Map<String, ProductTransactionEngine> productEngines = new HashMap<>();
 
     /** Index of position orders (identified by OrderId) */
-    private Map<OrderId, PositionOrder> positionOrderIdx = new ConcurrentHashMap<>();
+    private Map<OrderId, PositionOrder> positionOrderIdx = new HashMap<>();
     
     /** Set of active destinations */
     private Set<String> activeDestinations = new HashSet<>();
+    
+    /** Index of expected order id */
+    private int expectedOrderId = 1;
+    
+    /** Buffer for messages used to assure order of messages (map of messages identified by message id) */
+    private Map<Integer, BrokerMessage> messageBuffer = Collections.synchronizedMap(new HashMap<>(1024));
     
     /**
      * Constructor.
@@ -55,6 +66,7 @@ public class TransactionEngine extends Observable {
      */
     public TransactionEngine(Executor executor, Collection<String> destinations) {
         this.executor = executor;
+        this.messageBufferProcessingExecutor = new SerialExecutor(this.executor);
         
         if (destinations != null) {
             this.activeDestinations.addAll(destinations);
@@ -81,6 +93,8 @@ public class TransactionEngine extends Observable {
         transactions.clear();
         productEngines.clear();
         positionOrderIdx.clear();
+        messageBuffer.clear();
+        expectedOrderId = 1;
     }
 
     /**
@@ -93,11 +107,64 @@ public class TransactionEngine extends Observable {
     }
 
     /**
+     * Method called when BrokerMessage message arrives.
+     * It puts the message in buffer.
+     * 
+     * @param message PositionOrder message
+     */
+    public void onBrokerMessage(final BrokerMessage message) {
+        messageBuffer.put(message.getId(), message);
+        
+        messageBufferProcessingExecutor.execute(() -> processMessages());
+    }
+
+    /**
+     * Method called when ShutdownNotification message arrives.
+     * 
+     * @param message ShutdownNotification message
+     */
+    public void onBrokerMessage(final ShutdownNotification message) {
+        activeDestinations.remove(message.getBroker());
+        
+        if (activeDestinations.isEmpty()) {
+            messageBufferProcessingExecutor.execute(() -> {
+                CountDownLatch doneSignal = new CountDownLatch(productEngines.keySet().size());
+
+                shutdownAllProductEngines(doneSignal);
+                waitForTermination(doneSignal);
+            }); 
+        }
+    }
+    
+    /**
+     * Process messages from buffer.
+     */
+    private void processMessages() {
+        while (messageBuffer.size() > 0) {
+            BrokerMessage message = messageBuffer.remove(expectedOrderId);
+            
+            if (message != null) {
+                if (message instanceof PositionOrder) {
+                    processPositionOrder((PositionOrder) message);
+                } else if (message instanceof CancellationOrder) {
+                    processCancellationOrder((CancellationOrder) message);
+                } else if (message instanceof ModificationOrder) {
+                    processModificationOrder((ModificationOrder) message);
+                }
+                
+                expectedOrderId++;
+            } else {
+                break;
+            }
+        }
+    }
+
+    /**
      * Method called when PositionOrder message arrives.
      * 
      * @param message PositionOrder message
      */
-    public void onBrokerMessage(final PositionOrder message) {
+    private void processPositionOrder(final PositionOrder message) {
         ProductTransactionEngine pte = getProductTransactionEngine(message.getProduct());
 
         pte.onPositionOrder(message);
@@ -110,7 +177,7 @@ public class TransactionEngine extends Observable {
      * 
      * @param message CancellationOrder message
      */
-    public void onBrokerMessage(final CancellationOrder message) {
+    private void processCancellationOrder(final CancellationOrder message) {
         PositionOrder order = getIndexPositionOrder(message.getCancelledOrderId(), message.getBroker());
 
         if (MessageUtils.sameBroker(order, message)) {
@@ -127,7 +194,7 @@ public class TransactionEngine extends Observable {
      * 
      * @param message ModificationOrder message
      */
-    public void onBrokerMessage(final ModificationOrder message) {
+    private void processModificationOrder(final ModificationOrder message) {
         PositionOrder order = getIndexPositionOrder(message.getModifiedOrderId(), message.getBroker());
         PositionOrder newOrder = MessageUtils.modifyPositionOrderDetails(order, message);
         
@@ -138,24 +205,6 @@ public class TransactionEngine extends Observable {
             
             removeIndexPositionOrder(order);
             addIndexPositionOrder(newOrder);
-        }
-    }
-
-    /**
-     * Method called when ShutdownNotification message arrives.
-     * 
-     * @param message ShutdownNotification message
-     */
-    public void onBrokerMessage(final ShutdownNotification message) {
-        activeDestinations.remove(message.getBroker());
-        
-        if (activeDestinations.isEmpty()) {
-            executor.execute(() -> {
-                CountDownLatch doneSignal = new CountDownLatch(productEngines.keySet().size());
-
-                shutdownAllProductEngines(doneSignal);
-                waitForTermination(doneSignal);
-            }); 
         }
     }
     
