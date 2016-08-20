@@ -83,7 +83,7 @@ public class ProductTransactionEngine {
     public void onPositionOrder(final PositionOrder order) {
         executor.execute(() -> {
             addPositionOrder(order);
-            processTransactions();
+            executor.execute(() -> processTransactions());
         });
     }
 
@@ -95,7 +95,7 @@ public class ProductTransactionEngine {
     public void onCancelOrder(final PositionOrder order) {
         executor.execute(() -> {
             removePositionOrder(order);
-            processTransactions();
+            executor.execute(() -> processTransactions());
         });
     }
 
@@ -109,7 +109,7 @@ public class ProductTransactionEngine {
         executor.execute(() -> {
             removePositionOrder(oldOrder);
             addPositionOrder(newOrder);
-            processTransactions();
+            executor.execute(() -> processTransactions());
         });
     }
     
@@ -120,6 +120,7 @@ public class ProductTransactionEngine {
      */
     public void onShutdown(final CountDownLatch doneSignal) {
         executor.execute(() -> {
+            processTransactions();
             toOrderBook();
             buyOrders.clear();
             sellOrders.clear();
@@ -159,33 +160,33 @@ public class ProductTransactionEngine {
             break;
         }
     }
-
+    
     /**
-     * Try to process transactions based on orders on lists.
+     * Process transactions based on orders on lists.
      */
     private void processTransactions() {
-        while (!buyOrders.isEmpty() && !sellOrders.isEmpty()) {
+        while (buyOrders.size() > 0 && sellOrders.size() > 0) {
             PositionOrder buy = buyOrders.first();
             PositionOrder sell = sellOrders.first();
-
+            
             Transaction t = MessageUtils.tryCreateTransaction(transactionIdGenerator, buy, sell);
-
+            
             if (t == null) {
                 break;
             }
-
+            
             transactionEngine.addExecutedTransaction(t);
-
+            
             buyOrders.remove(buy);
             sellOrders.remove(sell);
-
+            
             PositionOrder newBuy = MessageUtils.modifyPositionOrderAmount(buy, t.getAmount());
             PositionOrder newSell = MessageUtils.modifyPositionOrderAmount(sell, t.getAmount());
-
+            
             if (newBuy != null) {
                 buyOrders.add(newBuy);
             }
-
+            
             if (newSell != null) {
                 sellOrders.add(newSell);
             }

@@ -43,7 +43,7 @@ public class ProductTransactionEngineTest {
 
         productTransactionEngine.onPositionOrder(order);
 
-        Mockito.verify(executor).execute(Matchers.any());
+        Mockito.verify(executor, Mockito.atLeastOnce()).execute(Matchers.any());
     }
 
     @Test
@@ -53,7 +53,7 @@ public class ProductTransactionEngineTest {
 
         productTransactionEngine.onCancelOrder(order);
 
-        Mockito.verify(executor).execute(Matchers.any());
+        Mockito.verify(executor, Mockito.atLeastOnce()).execute(Matchers.any());
     }
 
     @Test
@@ -65,7 +65,7 @@ public class ProductTransactionEngineTest {
 
         productTransactionEngine.onModifyOrder(oldOrder, newOrder);
 
-        Mockito.verify(executor).execute(Matchers.any());
+        Mockito.verify(executor, Mockito.atLeastOnce()).execute(Matchers.any());
     }
 
     @Test
@@ -74,7 +74,7 @@ public class ProductTransactionEngineTest {
 
         productTransactionEngine.onShutdown(doneSignal);
 
-        Mockito.verify(executor).execute(Matchers.any());
+        Mockito.verify(executor, Mockito.atLeastOnce()).execute(Matchers.any());
         Assert.assertEquals(doneSignal.getCount(), 0);
     }
 }
