@@ -113,7 +113,9 @@ public class StockExchange implements Exchange, Observer {
      */
     private void setUpExecutor() {
         if (executor == null) {
-            executor = Executors.newCachedThreadPool();
+            int thrdNo = (int) Math.pow(2, Math.max(destinations.size(), 4));
+            
+            executor = Executors.newFixedThreadPool(thrdNo);
         }
     }
     
