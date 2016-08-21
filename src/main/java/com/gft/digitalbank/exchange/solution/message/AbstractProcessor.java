@@ -4,7 +4,7 @@ import java.util.concurrent.Executor;
 
 import javax.jms.ConnectionFactory;
 
-import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
+import com.gft.digitalbank.exchange.solution.transaction.BrokerMessageListener;
 import com.google.common.base.Preconditions;
 
 import lombok.Getter;
@@ -23,9 +23,9 @@ public abstract class AbstractProcessor {
     @Setter @Getter
     protected ConnectionFactory connectionFactory;
     
-    /** Reference to TransactionEngine */
+    /** Reference to BrokerMessageListener */
     @Setter @Getter
-    protected TransactionEngine transactionEngine;
+    protected BrokerMessageListener brokerMessageListener;
     
     /** Optional executor which can be delivered in managed environments, i.e. JEE container */
     @Setter @Getter
@@ -60,7 +60,7 @@ public abstract class AbstractProcessor {
         log.info("Starting " + processorName);
         
         Preconditions.checkNotNull(connectionFactory, "ConnectionFactory not set");
-        Preconditions.checkNotNull(transactionEngine, "TransactionEngine not set");
+        Preconditions.checkNotNull(brokerMessageListener, "BrokerMessageListener not set");
         Preconditions.checkState(! started, processorName + " already started");
         
         doStart();

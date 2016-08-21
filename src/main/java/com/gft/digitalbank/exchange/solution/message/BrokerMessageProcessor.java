@@ -51,7 +51,7 @@ public class BrokerMessageProcessor extends AbstractProcessor {
             Destination     destination = session.createQueue(destinationName);
             MessageConsumer consumer    = session.createConsumer(destination);
             
-            consumer.setMessageListener(new OrderMessageListener(transactionEngine, this, executor));
+            consumer.setMessageListener(new OrderMessageListener(brokerMessageListener, this, executor));
         } catch (JMSException e) {
             log.error("JMSException in method doStart", e);
         }

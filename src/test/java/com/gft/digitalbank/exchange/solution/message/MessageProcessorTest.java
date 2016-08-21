@@ -18,7 +18,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
+import com.gft.digitalbank.exchange.solution.transaction.BrokerMessageListener;
 
 /**
  * Unit tests for class MessageProcessor.
@@ -32,7 +32,7 @@ public class MessageProcessorTest {
     private Executor executor = (r) -> r.run();
 
     @Mock
-    private TransactionEngine transactionEngine;
+    private BrokerMessageListener brokerMessageListener;
 
     @Mock
     private ConnectionFactory connectionFactory;
@@ -65,7 +65,7 @@ public class MessageProcessorTest {
 
             processor.setConnectionFactory(connectionFactory);
             processor.setExecutor(executor);
-            processor.setTransactionEngine(transactionEngine);
+            processor.setBrokerMessageListener(brokerMessageListener);
             processor.setDestinations(Arrays.asList(destinationName));
         } catch (JMSException e) {
         }

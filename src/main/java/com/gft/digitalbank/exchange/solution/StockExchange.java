@@ -15,6 +15,8 @@ import com.gft.digitalbank.exchange.Exchange;
 import com.gft.digitalbank.exchange.listener.ProcessingListener;
 import com.gft.digitalbank.exchange.model.SolutionResult;
 import com.gft.digitalbank.exchange.solution.message.MessageProcessor;
+import com.gft.digitalbank.exchange.solution.transaction.BrokerMessageListener;
+import com.gft.digitalbank.exchange.solution.transaction.MessageOrderAssuranceBuffer;
 import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
 
 import lombok.extern.log4j.Log4j;
@@ -42,6 +44,9 @@ public class StockExchange implements Exchange, Observer {
     /** TransactionEngine reference */
     private TransactionEngine transactionEngine;
     
+    /** BrokerMessageListener reference */
+    private BrokerMessageListener brokerMessageListener;
+    
     /** Executor pool */
     private ExecutorService executor;
     
@@ -68,6 +73,7 @@ public class StockExchange implements Exchange, Observer {
         setUpConnectionFactory();
         setUpExecutor();
         setUpTransactionEngine();
+        setUpBrokerMessageListener();
         setUpTransactionEngineShutdownListener();
         setUpMessageProcessor();
         
@@ -118,6 +124,13 @@ public class StockExchange implements Exchange, Observer {
         transactionEngine = new TransactionEngine(executor, destinations);
     }
     
+    /**
+     * Method creates BrokerMessageListener instance.
+     */
+    private void setUpBrokerMessageListener() {
+        brokerMessageListener = new MessageOrderAssuranceBuffer(transactionEngine, executor);
+    }
+    
     private void setUpTransactionEngineShutdownListener() {
         transactionEngine.addObserver(this);
     }
@@ -130,7 +143,7 @@ public class StockExchange implements Exchange, Observer {
         
         messageProcessor.setConnectionFactory(connectionFactory);
         messageProcessor.setExecutor(executor);
-        messageProcessor.setTransactionEngine(transactionEngine);
+        messageProcessor.setBrokerMessageListener(brokerMessageListener);
         messageProcessor.setDestinations(destinations);
     }
 }

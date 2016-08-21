@@ -56,7 +56,7 @@ public class MessageProcessor extends AbstractProcessor {
         BrokerMessageProcessor processor = new BrokerMessageProcessor(destination);
         
         processor.setConnectionFactory(connectionFactory);
-        processor.setTransactionEngine(transactionEngine);
+        processor.setBrokerMessageListener(brokerMessageListener);
         processor.setExecutor(serialExecutor);
         processor.start();
         

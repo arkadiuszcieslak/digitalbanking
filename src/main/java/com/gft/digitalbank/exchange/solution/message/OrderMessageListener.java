@@ -16,7 +16,7 @@ import com.gft.digitalbank.exchange.solution.message.handler.MessageHandler;
 import com.gft.digitalbank.exchange.solution.message.handler.ModificationOrderHandler;
 import com.gft.digitalbank.exchange.solution.message.handler.PositionOrderHandler;
 import com.gft.digitalbank.exchange.solution.message.handler.ShutdownNotificationHandler;
-import com.gft.digitalbank.exchange.solution.transaction.TransactionEngine;
+import com.gft.digitalbank.exchange.solution.transaction.BrokerMessageListener;
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
 
@@ -27,8 +27,8 @@ import com.google.gson.Gson;
  */
 public class OrderMessageListener implements MessageListener {
 
-    /** Reference to TransactionEngine */
-    private final TransactionEngine transactionEngine;
+    /** Reference to BrokerMessageListener */
+    private final BrokerMessageListener brokerMessageListener;
 
     /** Reference to BrokerMessageProcessor object */
     private final BrokerMessageProcessor brokerMessageProcessor;
@@ -55,8 +55,8 @@ public class OrderMessageListener implements MessageListener {
     /**
      * Constructor.
      */
-    public OrderMessageListener(TransactionEngine transactionEngine, BrokerMessageProcessor processor, Executor executor) {
-        this.transactionEngine = transactionEngine;
+    public OrderMessageListener(BrokerMessageListener brokerMessageListener, BrokerMessageProcessor processor, Executor executor) {
+        this.brokerMessageListener = brokerMessageListener;
         this.brokerMessageProcessor = processor;
         this.executor = executor;
     }
@@ -77,7 +77,7 @@ public class OrderMessageListener implements MessageListener {
                 BrokerMessage bm = deserializeBrokerMessage(((TextMessage) message).getText(), handler.getMessageClass());
                 Preconditions.checkNotNull(bm, "BrokerMessage is null");
 
-                handler.handleMessage(transactionEngine, brokerMessageProcessor, bm);
+                handler.handleMessage(brokerMessageListener, brokerMessageProcessor, bm);
 
             } catch (JMSException e) {
 
