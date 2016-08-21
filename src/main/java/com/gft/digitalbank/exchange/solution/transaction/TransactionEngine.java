@@ -163,7 +163,7 @@ public class TransactionEngine extends Observable {
      * 
      * @param message PositionOrder message
      */
-    private void processPositionOrder(final PositionOrder message) {
+    protected void processPositionOrder(final PositionOrder message) {
         ProductTransactionEngine pte = getProductTransactionEngine(message.getProduct());
 
         pte.onPositionOrder(message);
@@ -176,7 +176,7 @@ public class TransactionEngine extends Observable {
      * 
      * @param message CancellationOrder message
      */
-    private void processCancellationOrder(final CancellationOrder message) {
+    protected void processCancellationOrder(final CancellationOrder message) {
         PositionOrder order = getIndexPositionOrder(message.getCancelledOrderId());
 
         if (MessageUtils.sameBroker(order, message)) {
@@ -193,7 +193,7 @@ public class TransactionEngine extends Observable {
      * 
      * @param message ModificationOrder message
      */
-    private void processModificationOrder(final ModificationOrder message) {
+    protected void processModificationOrder(final ModificationOrder message) {
         PositionOrder order = getIndexPositionOrder(message.getModifiedOrderId());
         PositionOrder newOrder = MessageUtils.modifyPositionOrderDetails(order, message);
         
